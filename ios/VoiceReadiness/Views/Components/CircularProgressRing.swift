@@ -27,7 +27,7 @@ struct CircularProgressRing: View {
                     .monospacedDigit()
                 Text("sec")
                     .font(.title3.weight(.medium))
-                    .foregroundStyle(AppTheme.textSecondary)
+                    .foregroundStyle(AppTheme.inkSoft)
             }
         }
         .frame(width: size, height: size)

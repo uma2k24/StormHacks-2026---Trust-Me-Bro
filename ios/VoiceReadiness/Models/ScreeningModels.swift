@@ -12,11 +12,31 @@ enum StatusColor {
     case yellow
     case red
 
-    var color: Color {
+    /// Mirrors statusColorForScore() in frontend/src/data/mockResults.ts.
+    init(score: Int) {
+        if score >= 80 {
+            self = .green
+        } else if score >= 60 {
+            self = .yellow
+        } else {
+            self = .red
+        }
+    }
+
+    /// Chip fill: teal tint for ready, then warmer coral the further from ready.
+    var fill: Color {
         switch self {
-        case .green: return Color(red: 0.24, green: 0.86, blue: 0.52)
-        case .yellow: return Color(red: 0.96, green: 0.77, blue: 0.09)
-        case .red: return Color(red: 1.0, green: 0.42, blue: 0.42)
+        case .green: return AppTheme.tealSoft
+        case .yellow: return AppTheme.accentSoft
+        case .red: return AppTheme.accent
+        }
+    }
+
+    var chipSymbol: String {
+        switch self {
+        case .green: return "checkmark.circle"
+        case .yellow: return "exclamationmark.triangle"
+        case .red: return "moon"
         }
     }
 
@@ -32,16 +52,11 @@ enum StatusColor {
 struct Metric: Identifiable {
     let id = UUID()
     let label: String
+    let description: String
     let status: String
     let deviation: Int
     let isWarning: Bool
     let systemImage: String
-
-    var deviationText: String {
-        if deviation == 0 { return "Matches normal" }
-        let sign = deviation > 0 ? "+" : ""
-        return "\(sign)\(deviation)% from normal"
-    }
 }
 
 struct TrendPoint: Identifiable {
@@ -64,35 +79,39 @@ struct ScreeningResults {
         user: "David",
         readinessScore: 68,
         statusColor: .yellow,
-        aiSummary: "Your speech pacing is a bit slower than your usual baseline today. It might be a good idea to rest and hydrate.",
+        aiSummary: "Your pitch wobbles a little more than usual today, and your voice sounds a bit breathier. Rest and hydrate may help.",
         metrics: [
             Metric(
-                label: "Vocal Energy",
-                status: "Slightly Low",
-                deviation: -10,
+                label: "Jitter",
+                description: "How much the pitch wobbles",
+                status: "A bit higher",
+                deviation: 12,
+                isWarning: true,
+                systemImage: "waveform.path.ecg"
+            ),
+            Metric(
+                label: "Shimmer",
+                description: "How much the volume shakes",
+                status: "Steady",
+                deviation: 0,
                 isWarning: false,
                 systemImage: "waveform"
             ),
             Metric(
-                label: "Vocal Control",
-                status: "Steady",
-                deviation: 0,
-                isWarning: false,
-                systemImage: "mic.fill"
-            ),
-            Metric(
-                label: "Cognitive Pacing",
-                status: "15% Slower",
-                deviation: -15,
+                label: "HNR",
+                description: "How clear vs. breathy the voice is",
+                status: "Slightly lower",
+                deviation: -10,
                 isWarning: true,
-                systemImage: "brain.head.profile"
+                systemImage: "wind"
             ),
             Metric(
-                label: "Expression Level",
-                status: "Normal",
-                deviation: -2,
+                label: "MPP",
+                description: "How regular the vocal cords vibrate",
+                status: "Mostly regular",
+                deviation: -4,
                 isWarning: false,
-                systemImage: "face.smiling"
+                systemImage: "metronome.fill"
             )
         ],
         trendData: [
@@ -114,13 +133,4 @@ struct ScreeningResults {
         yesterdayScore: 82,
         yesterdayLabel: "Optimal"
     )
-}
-
-enum AppTheme {
-    static let background = Color(red: 0.04, green: 0.06, blue: 0.08)
-    static let surface = Color(red: 0.08, green: 0.11, blue: 0.14)
-    static let border = Color(red: 0.30, green: 0.38, blue: 0.48)
-    static let accent = Color(red: 0.96, green: 0.77, blue: 0.09)
-    static let textPrimary = Color.white
-    static let textSecondary = Color(red: 0.78, green: 0.82, blue: 0.88)
 }

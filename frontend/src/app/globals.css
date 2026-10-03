@@ -634,6 +634,25 @@ a {
   text-wrap: balance;
   text-shadow: 0 0 18px currentColor;
 }
+/* a brief is longer than a question, so it reads a size down */
+.radio-caption[data-size="brief"] {
+  font-size: clamp(1.5rem, 6.2vw, 1.85rem);
+  line-height: 1.25;
+}
+/* which segment is on air */
+.radio-topic {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
 .radio-screen .eq {
   position: relative;
   z-index: 1;

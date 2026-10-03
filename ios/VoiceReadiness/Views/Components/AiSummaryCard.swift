@@ -5,49 +5,38 @@ struct AiSummaryCard: View {
     @State private var isPlaying = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Your Voice Summary")
-                .font(.title.weight(.bold))
-                .foregroundStyle(AppTheme.accent.opacity(0.95))
+        RetroWindow(title: "Your Voice Summary") {
+            VStack(alignment: .leading, spacing: 28) {
+                Text(summary)
+                    .font(AppFont.body(24))
+                    .lineSpacing(7)
+                    .foregroundStyle(AppTheme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            HStack(alignment: .top, spacing: 16) {
                 Button {
-                    isPlaying.toggle()
+                    withAnimation(.easeOut(duration: 0.2)) { isPlaying.toggle() }
                 } label: {
-                    VStack(spacing: 6) {
+                    HStack(spacing: 12) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title.weight(.bold))
-                        Text(isPlaying ? "Pause" : "Play")
-                            .font(.headline.weight(.bold))
+                            .font(.system(size: 22, weight: .bold))
+                        Text(isPlaying ? "Pause summary" : "Play summary")
                     }
-                    .foregroundStyle(Color(red: 0.05, green: 0.07, blue: 0.09))
-                    .frame(width: 96, height: 96)
-                    .background(AppTheme.accent, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PillButtonStyle(fill: isPlaying ? AppTheme.teal : .white))
                 .accessibilityLabel(isPlaying ? "Pause voice summary" : "Play voice summary")
 
-                Text(summary)
-                    .font(.title3)
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if isPlaying {
-                Text("Playing summary…")
-                    .font(.headline.weight(.medium))
-                    .foregroundStyle(AppTheme.accent)
+                if isPlaying {
+                    HStack(spacing: 12) {
+                        WaveformView(barCount: 9, height: 35)
+                            .foregroundStyle(AppTheme.tealDeep)
+                        Text("Playing summary…")
+                            .font(AppFont.body(18, bold: true))
+                            .foregroundStyle(AppTheme.ink)
+                    }
+                    .transition(.opacity)
+                    .accessibilityElement(children: .combine)
+                }
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(AppTheme.surface.opacity(0.9))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(AppTheme.border.opacity(0.7), lineWidth: 1)
-                )
-        )
     }
 }

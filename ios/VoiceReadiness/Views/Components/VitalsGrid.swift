@@ -3,68 +3,63 @@ import SwiftUI
 struct VitalsGrid: View {
     let metrics: [Metric]
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 14),
-        GridItem(.flexible(), spacing: 14)
-    ]
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Today's Vitals")
-                .font(.title.weight(.bold))
-                .foregroundStyle(.white)
-
-            LazyVGrid(columns: columns, spacing: 14) {
-                ForEach(metrics) { metric in
-                    VitalCard(metric: metric)
+        RetroWindow(title: "Today's Vitals", padded: false) {
+            VStack(spacing: 0) {
+                ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+                    if index > 0 {
+                        DashedDivider()
+                    }
+                    VitalRow(metric: metric)
                 }
             }
         }
     }
 }
 
-private struct VitalCard: View {
+private struct DashedDivider: View {
+    var body: some View {
+        Rectangle()
+            .stroke(AppTheme.ink.opacity(0.3), style: StrokeStyle(lineWidth: 3, dash: [7, 5]))
+            .frame(height: 3)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct VitalRow: View {
     let metric: Metric
 
+    @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 48
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        HStack(alignment: .top, spacing: 14) {
             Image(systemName: metric.systemImage)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(AppTheme.accent.opacity(0.95))
-                .frame(width: 64, height: 64)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(red: 0.12, green: 0.16, blue: 0.21))
-                )
+                .font(.system(size: tileSize * 0.44, weight: .semibold))
+                .foregroundStyle(AppTheme.ink)
+                .frame(width: tileSize, height: tileSize)
+                .background(Circle().fill(AppTheme.tealSoft))
+                .overlay { Circle().stroke(AppTheme.ink, lineWidth: 2.5) }
+                .hardShadow(Circle(), offset: 3)
+                .accessibilityHidden(true)
 
-            Text(metric.label)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(metric.label)
+                    .font(AppFont.head(23, relativeTo: .title3))
+                    .foregroundStyle(AppTheme.ink)
 
-            Text(metric.status)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(metric.isWarning ? AppTheme.accent : StatusColor.green.color)
+                Text(metric.description)
+                    .font(AppFont.body(17))
+                    .foregroundStyle(AppTheme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 8) {
-                Image(systemName: metric.deviation == 0 ? "arrow.right" : "arrow.down")
-                Text(metric.deviationText)
+                StatusChip(status: metric.isWarning ? .yellow : .green, label: metric.status)
+                    .padding(.top, 5)
             }
-            .font(.body.weight(.medium))
-            .foregroundStyle(AppTheme.textSecondary)
+            Spacer(minLength: 0)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 210, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(metric.isWarning ? AppTheme.accent.opacity(0.1) : AppTheme.surface.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(
-                            metric.isWarning ? AppTheme.accent.opacity(0.5) : AppTheme.border.opacity(0.7),
-                            lineWidth: 1
-                        )
-                )
-        )
+        .padding(.horizontal, 18)
+        .padding(.vertical, 13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }

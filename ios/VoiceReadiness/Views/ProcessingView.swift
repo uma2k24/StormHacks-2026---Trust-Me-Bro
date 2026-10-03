@@ -9,76 +9,96 @@ struct ProcessingView: View {
         "Almost there…"
     ]
 
-    @State private var messageIndex = 0
-    @State private var pulse = false
+    // 16 blocks x 300 ms = the same 4.8 s (+ a short rest) as the web client.
+    private static let blockCount = 16
+    private static let tick: Duration = .milliseconds(300)
+
+    @ScaledMetric(relativeTo: .title) private var messageSize: CGFloat = 34
+    @State private var filled = 0
     @State private var loopTask: Task<Void, Never>?
 
+    private var messageIndex: Int {
+        min(Int(Double(filled) / Double(Self.blockCount) * Double(messages.count)), messages.count - 1)
+    }
+
+    private var percent: Int {
+        Int((Double(filled) / Double(Self.blockCount) * 100).rounded())
+    }
+
     var body: some View {
-        VStack(spacing: 36) {
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(AppTheme.accent.opacity(0.2))
-                    .frame(width: 180, height: 180)
-                    .scaleEffect(pulse ? 1.18 : 1.0)
-                    .opacity(pulse ? 0.25 : 0.55)
-
-                Circle()
-                    .fill(Color(red: 0.18, green: 0.23, blue: 0.30).opacity(0.9))
-                    .frame(width: 120, height: 120)
-
-                Circle()
-                    .fill(Color(red: 0.27, green: 0.33, blue: 0.40))
-                    .frame(width: 64, height: 64)
+        GeometryReader { proxy in
+            ScrollView {
+                window
+                    .padding(.horizontal, 20)
+                    .padding(.trailing, AppTheme.pop)
+                    .padding(.vertical, 24)
+                    .frame(minHeight: proxy.size.height)
             }
-            .accessibilityHidden(true)
-
-            Text(messages[messageIndex])
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
-                .animation(.easeInOut(duration: 0.35), value: messageIndex)
-                .accessibilityAddTraits(.updatesFrequently)
-
-            VStack(spacing: 12) {
-                capsule(widthFraction: 1.0, opacity: 0.8)
-                capsule(widthFraction: 0.82, opacity: 0.6)
-                capsule(widthFraction: 0.64, opacity: 0.45)
-            }
-            .padding(.horizontal, 28)
-            .accessibilityHidden(true)
-
-            Spacer()
+            .scrollBounceBehavior(.basedOnSize)
         }
         .onAppear(perform: start)
         .onDisappear(perform: cleanup)
     }
 
-    private func capsule(widthFraction: CGFloat, opacity: Double) -> some View {
-        GeometryReader { geo in
-            RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(Color(red: 0.22, green: 0.28, blue: 0.35).opacity(opacity))
-                .frame(width: geo.size.width * widthFraction)
-                .frame(maxWidth: .infinity)
-                .opacity(pulse ? 0.55 : 1.0)
+    private var window: some View {
+        RetroWindow(title: "Working…") {
+            VStack(spacing: 34) {
+                ZStack {
+                    Circle().fill(AppTheme.teal)
+                    WaveformView(barCount: 7, height: 44).foregroundStyle(AppTheme.ink)
+                }
+                .frame(width: 96, height: 96)
+                .overlay { Circle().stroke(AppTheme.ink, lineWidth: 3) }
+                .hardShadow(Circle(), offset: 4)
+                .padding(.top, 6)
+
+                VStack(spacing: 12) {
+                    Text(messages[messageIndex])
+                        .font(AppFont.head(messageSize, relativeTo: .title))
+                        .foregroundStyle(AppTheme.ink)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .id(messageIndex)
+                        .transition(.asymmetric(insertion: .scale(scale: 0.96).combined(with: .opacity), removal: .identity))
+                        .accessibilityAddTraits(.updatesFrequently)
+
+                    Text("Please wait a moment.")
+                        .font(AppFont.body(22))
+                        .foregroundStyle(AppTheme.inkSoft)
+                }
+
+                progressBlocks
+                    .padding(.bottom, 6)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(height: 18)
+    }
+
+    private var progressBlocks: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<Self.blockCount, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(index < filled ? AppTheme.teal : AppTheme.paperDeep)
+                    .frame(height: 32)
+            }
+        }
+        .padding(5)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(AppTheme.ink, lineWidth: 3) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Checking your voice")
+        .accessibilityValue("\(percent) percent")
     }
 
     private func start() {
-        withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-            pulse = true
-        }
-
         loopTask = Task { @MainActor in
-            for _ in 0..<3 {
-                try? await Task.sleep(nanoseconds: 1_600_000_000)
+            for _ in 0..<Self.blockCount {
+                try? await Task.sleep(for: Self.tick)
                 guard !Task.isCancelled else { return }
-                messageIndex = (messageIndex + 1) % messages.count
+                withAnimation(.easeOut(duration: 0.2)) { filled += 1 }
             }
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? await Task.sleep(for: Self.tick)
             guard !Task.isCancelled else { return }
             onComplete()
         }

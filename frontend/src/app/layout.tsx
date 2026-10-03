@@ -18,9 +18,9 @@ const display = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Voice Readiness Check-in",
+  title: "Morning Radio",
   description:
-    "A daily voice check-in that shows your readiness in plain language.",
+    "A personal morning radio show: local weather, scores and news, read aloud.",
 };
 
 export const viewport: Viewport = {

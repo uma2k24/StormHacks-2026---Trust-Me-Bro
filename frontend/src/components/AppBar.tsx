@@ -75,7 +75,7 @@ export function AppBar() {
               <rect x="27.5" y="17.5" width="3.6" height="5" rx="1.8" />
             </g>
           </svg>
-          <span className="brand-name display">Voice Check-in</span>
+          <span className="brand-name display">Morning Radio</span>
         </div>
 
         <div className="textsize" role="group" aria-label="Text size">

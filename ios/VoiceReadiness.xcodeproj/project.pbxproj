@@ -11,6 +11,7 @@
 		325EF20AC282449689F52A85 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51330C3F293C400193C03B0A /* ContentView.swift */; };
 		6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */; };
 		C7A1B2D3E4F5061728394A5B /* CheckInScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* BriefingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */; };
 		8E5235201F9F4B048822348A /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0131046926C7453DB0A2718C /* IdleView.swift */; };
 		E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E56B5488BD045F087A32E49 /* RecordingView.swift */; };
 		0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5729BE7C8004650B2F05570 /* ProcessingView.swift */; };
@@ -21,6 +22,11 @@
 		CE719BF919B545C196EFE662 /* AiSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */; };
 		04BF0BF51CC94E85A79B3963 /* VitalsGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */; };
 		D82FC20750CE4657873CC6EF /* TrendChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0223900F4B4CFD98FE069E /* TrendChartView.swift */; };
+		4E2B3C5D6F708192A3B4C5D6 /* Chrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F1A2B4C5D6E7F8091A2B3C4 /* Chrome.swift */; };
+		6B4D5E7F8091A2B3C4D5E6F7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3C4D6E7F8091A2B3C4D5E6 /* Theme.swift */; };
+		8D6F7081A2B3C4D5E6F70819 /* AtkinsonHyperlegible-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7C5E6F8091A2B3C4D5E6F708 /* AtkinsonHyperlegible-Regular.ttf */; };
+		AF8192A3C4D5E6F708192A3B /* AtkinsonHyperlegible-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9E708192B3C4D5E6F708192A /* AtkinsonHyperlegible-Bold.ttf */; };
+		C1A34BC5D6E7F8091A2B3C4D /* BricolageGrotesque-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B0923AB4C5D6E7F8091A2B3C /* BricolageGrotesque-ExtraBold.ttf */; };
 		DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 623F283978454BC98621FE5A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +36,7 @@
 		51330C3F293C400193C03B0A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreeningModels.swift; sourceTree = "<group>"; };
 		D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInScript.swift; sourceTree = "<group>"; };
+		B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingService.swift; sourceTree = "<group>"; };
 		0131046926C7453DB0A2718C /* IdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
 		9E56B5488BD045F087A32E49 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		E5729BE7C8004650B2F05570 /* ProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingView.swift; sourceTree = "<group>"; };
@@ -40,6 +47,13 @@
 		0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiSummaryCard.swift; sourceTree = "<group>"; };
 		9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalsGrid.swift; sourceTree = "<group>"; };
 		0B0223900F4B4CFD98FE069E /* TrendChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartView.swift; sourceTree = "<group>"; };
+		3F1A2B4C5D6E7F8091A2B3C4 /* Chrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chrome.swift; sourceTree = "<group>"; };
+		5A3C4D6E7F8091A2B3C4D5E6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7C5E6F8091A2B3C4D5E6F708 /* AtkinsonHyperlegible-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AtkinsonHyperlegible-Regular.ttf"; sourceTree = "<group>"; };
+		9E708192B3C4D5E6F708192A /* AtkinsonHyperlegible-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "AtkinsonHyperlegible-Bold.ttf"; sourceTree = "<group>"; };
+		B0923AB4C5D6E7F8091A2B3C /* BricolageGrotesque-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BricolageGrotesque-ExtraBold.ttf"; sourceTree = "<group>"; };
+		D2B45CD6E7F8091A2B3C4D5E /* OFL-AtkinsonHyperlegible.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-AtkinsonHyperlegible.txt"; sourceTree = "<group>"; };
+		E3C56DE7F8091A2B3C4D5E6F /* OFL-BricolageGrotesque.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-BricolageGrotesque.txt"; sourceTree = "<group>"; };
 		623F283978454BC98621FE5A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -77,6 +91,7 @@
 				51330C3F293C400193C03B0A /* ContentView.swift */,
 				93501A6CE42441BDAB141062 /* Models */,
 				990A8A2ACD9E4822B54161B8 /* Views */,
+				F4D67EF8091A2B3C4D5E6F70 /* Fonts */,
 				623F283978454BC98621FE5A /* Assets.xcassets */,
 			);
 			path = VoiceReadiness;
@@ -87,6 +102,7 @@
 			children = (
 				F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */,
 				D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */,
+				B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -112,8 +128,22 @@
 				0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */,
 				9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */,
 				0B0223900F4B4CFD98FE069E /* TrendChartView.swift */,
+				3F1A2B4C5D6E7F8091A2B3C4 /* Chrome.swift */,
+				5A3C4D6E7F8091A2B3C4D5E6 /* Theme.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		F4D67EF8091A2B3C4D5E6F70 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				7C5E6F8091A2B3C4D5E6F708 /* AtkinsonHyperlegible-Regular.ttf */,
+				9E708192B3C4D5E6F708192A /* AtkinsonHyperlegible-Bold.ttf */,
+				B0923AB4C5D6E7F8091A2B3C /* BricolageGrotesque-ExtraBold.ttf */,
+				D2B45CD6E7F8091A2B3C4D5E /* OFL-AtkinsonHyperlegible.txt */,
+				E3C56DE7F8091A2B3C4D5E6F /* OFL-BricolageGrotesque.txt */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -175,6 +205,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */,
+				8D6F7081A2B3C4D5E6F70819 /* AtkinsonHyperlegible-Regular.ttf in Resources */,
+				AF8192A3C4D5E6F708192A3B /* AtkinsonHyperlegible-Bold.ttf in Resources */,
+				C1A34BC5D6E7F8091A2B3C4D /* BricolageGrotesque-ExtraBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -189,6 +222,7 @@
 				325EF20AC282449689F52A85 /* ContentView.swift in Sources */,
 				6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */,
 				C7A1B2D3E4F5061728394A5B /* CheckInScript.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* BriefingService.swift in Sources */,
 				8E5235201F9F4B048822348A /* IdleView.swift in Sources */,
 				E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */,
 				0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */,
@@ -199,6 +233,8 @@
 				CE719BF919B545C196EFE662 /* AiSummaryCard.swift in Sources */,
 				04BF0BF51CC94E85A79B3963 /* VitalsGrid.swift in Sources */,
 				D82FC20750CE4657873CC6EF /* TrendChartView.swift in Sources */,
+				4E2B3C5D6F708192A3B4C5D6 /* Chrome.swift in Sources */,
+				6B4D5E7F8091A2B3C4D5E6F7 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

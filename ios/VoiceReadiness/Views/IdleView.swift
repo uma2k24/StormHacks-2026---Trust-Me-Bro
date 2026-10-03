@@ -2,84 +2,124 @@ import SwiftUI
 
 struct IdleView: View {
     let userName: String
-    let yesterdayScore: Int
-    let yesterdayLabel: String
+    let segments: [BriefingSegment]
     let onStart: () -> Void
 
-    @State private var pulse = false
+    @ScaledMetric(relativeTo: .largeTitle) private var headlineSize: CGFloat = 46
+    @ScaledMetric(relativeTo: .body) private var orbBase: CGFloat = 220
 
     var body: some View {
-        VStack(spacing: 36) {
-            VStack(spacing: 12) {
-                Text("Daily Voice Check-in")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(AppTheme.accent.opacity(0.9))
+        GeometryReader { proxy in
+            // the big button shrinks on short screens instead of forcing a scroll
+            let orb = min(orbBase, 270, proxy.size.height * 0.31)
 
-                Text("Good Morning, \(userName).")
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.8)
+            ScrollView {
+                VStack(spacing: 0) {
+                    header
+
+                    Spacer(minLength: 40)
+
+                    startButton(size: orb)
+
+                    Spacer(minLength: 40)
+
+                    lineup
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 28)
+                .padding(.bottom, 8)
+                .frame(minHeight: proxy.size.height)
             }
-            .padding(.top, 24)
+            .scrollBounceBehavior(.basedOnSize)
+        }
+    }
 
-            Spacer()
-
-            Button(action: onStart) {
-                ZStack {
-                    Circle()
-                        .fill(AppTheme.accent.opacity(0.18))
-                        .frame(width: 260, height: 260)
-                        .scaleEffect(pulse ? 1.12 : 1.0)
-                        .opacity(pulse ? 0.35 : 0.7)
-
-                    Circle()
-                        .fill(AppTheme.accent.opacity(0.25))
-                        .frame(width: 210, height: 210)
-                        .scaleEffect(pulse ? 1.08 : 1.0)
-
-                    Circle()
-                        .fill(AppTheme.accent)
-                        .frame(width: 176, height: 176)
-                        .shadow(color: AppTheme.accent.opacity(0.45), radius: 28, y: 8)
-
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 72, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.05, green: 0.07, blue: 0.09))
+    private var header: some View {
+        VStack(spacing: 18) {
+            CenteredFlowLayout(spacing: headlineSize * 0.26) {
+                Text("Good")
+                Text("Morning,")
+                // the name and its full stop travel together
+                HStack(spacing: 0) {
+                    Text(userName).markerHighlight(size: headlineSize)
+                    Text(".")
                 }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Tap to start a conversational check-in")
-            .frame(minWidth: 176, minHeight: 176)
+            .font(AppFont.head(headlineSize, relativeTo: .largeTitle))
+            .tracking(-0.9)
+            .foregroundStyle(AppTheme.ink)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Good Morning, \(userName).")
+            .accessibilityAddTraits(.isHeader)
 
-            Text("Want to check in? Just tap and we'll talk.")
-                .font(.title2.weight(.medium))
-                .foregroundStyle(AppTheme.textPrimary)
+            Text("Your morning radio is ready.\nTap to tune in.")
+                .font(AppFont.body(22))
+                .foregroundStyle(AppTheme.inkSoft)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-
-            Spacer()
-
-            Text("Yesterday: \(yesterdayScore) — \(yesterdayLabel)")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(StatusColor.green.color)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 14)
-                .background(
-                    Capsule()
-                        .fill(StatusColor.green.color.opacity(0.14))
-                        .overlay(
-                            Capsule()
-                                .stroke(StatusColor.green.color.opacity(0.4), lineWidth: 1.5)
-                        )
-                )
-                .padding(.bottom, 16)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 24)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
-                pulse = true
+        .popIn(0)
+    }
+
+    private func startButton(size: CGFloat) -> some View {
+        ZStack {
+            SonarRings(diameter: size)
+
+            Button(action: onStart) {
+                VStack(spacing: 6) {
+                    Image(systemName: "radio.fill")
+                        .font(.system(size: size * 0.29, weight: .semibold))
+                    Text("Play")
+                        .font(AppFont.head(34, relativeTo: .title))
+                }
             }
+            .buttonStyle(OrbButtonStyle(size: size))
+            .accessibilityLabel("Tap to play your morning radio")
+        }
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var lineup: some View {
+        let card = RoundedRectangle(cornerRadius: AppTheme.radius, style: .continuous)
+        let topics = segments.map(\.topic).joined(separator: ", ")
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("On today's show")
+                .font(AppFont.body(20, bold: true))
+                .foregroundStyle(AppTheme.inkSoft)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { chips }
+                VStack(alignment: .leading, spacing: 8) { chips }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(card.fill(Color.white))
+        .overlay { card.stroke(AppTheme.ink, lineWidth: AppTheme.line) }
+        .hardShadow(card, offset: 5)
+        .padding(.trailing, 5)
+        .popIn(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("On today's show: \(topics)")
+    }
+
+    private var chips: some View {
+        ForEach(segments) { segment in
+            HStack(spacing: 8) {
+                Image(systemName: segment.kind.systemImage)
+                    .font(.system(size: 17, weight: .bold))
+                Text(segment.topic)
+                    .font(AppFont.body(18, bold: true))
+            }
+            .foregroundStyle(AppTheme.ink)
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(Color.white))
+            .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 2.5) }
         }
     }
 }

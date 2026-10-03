@@ -3,41 +3,45 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Mic } from "lucide-react";
+import { SegmentIcon } from "@/components/SegmentIcon";
 import { Waveform } from "@/components/Waveform";
 import {
   ACKNOWLEDGE_MS,
-  checkInScript,
+  type BriefingSegment,
   LISTEN_MS,
   MIN_HOLD_MS,
   RECEIVE_MS,
 } from "@/data/checkInScript";
+import { prefetchClip, speak, wait } from "@/lib/radioVoice";
 
 /**
- * The conversation is one little radio with one line of text on its screen:
- *   speaking  - the question arrives
+ * The morning show is one little radio with one line of text on its screen:
+ *   briefing  - the radio reads the segment's brief (weather, a score, local news)
+ *   speaking  - then asks what you think
  *   ready     - the question stays up while you decide to answer
  *   listening - "Listening…"
- *   heard     - your own words, briefly, before the next question
+ *   heard     - your own words, briefly, before the next segment
  * Talking works both ways: hold the button and let go to send (walkie-talkie),
  * or just tap once to start and tap again when you're done (voice mode).
  */
-type Phase = "speaking" | "ready" | "listening" | "heard";
+type Phase = "briefing" | "speaking" | "ready" | "listening" | "heard";
 
 type ActiveScreenProps = {
+  segments: BriefingSegment[];
   onComplete: () => void;
 };
 
-export function ActiveScreen({ onComplete }: ActiveScreenProps) {
+export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
   const [turnIndex, setTurnIndex] = useState(0);
-  const [phase, setPhaseState] = useState<Phase>("speaking");
-  const phaseRef = useRef<Phase>("speaking");
+  const [phase, setPhaseState] = useState<Phase>("briefing");
+  const phaseRef = useRef<Phase>("briefing");
   const timers = useRef<number[]>([]);
   const listenTimer = useRef<number | null>(null);
   const pressStartedAt = useRef<number | null>(null);
 
-  const totalTurns = checkInScript.length;
-  const turn = checkInScript[Math.min(turnIndex, totalTurns - 1)];
-  const questionNumber = Math.min(turnIndex + 1, totalTurns);
+  const totalTurns = segments.length;
+  const turn = segments[Math.min(turnIndex, totalTurns - 1)];
+  const segmentNumber = Math.min(turnIndex + 1, totalTurns);
 
   const setPhase = (next: Phase) => {
     phaseRef.current = next;
@@ -48,11 +52,34 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
     timers.current.push(window.setTimeout(fn, ms));
   };
 
-  // Each new question "arrives" for a moment, then the talk button wakes up.
+  // Each segment: read the brief, ask the question, then wake the talk button.
   useEffect(() => {
-    const id = window.setTimeout(() => setPhase("ready"), RECEIVE_MS);
-    return () => window.clearTimeout(id);
-  }, [turnIndex]);
+    const segment = segments[turnIndex];
+    if (!segment) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    prefetchClip(segment.brief);
+    prefetchClip(segment.question);
+    // warm up the next segment while this one plays
+    const upcoming = segments[turnIndex + 1];
+    if (upcoming) {
+      prefetchClip(upcoming.brief);
+      prefetchClip(upcoming.question);
+    }
+
+    (async () => {
+      setPhase("briefing");
+      await speak(segment.brief, signal);
+      if (signal.aborted) return;
+      setPhase("speaking");
+      await Promise.all([speak(segment.question, signal), wait(RECEIVE_MS, signal)]);
+      if (signal.aborted) return;
+      setPhase("ready");
+    })();
+
+    return () => controller.abort();
+  }, [turnIndex, segments]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -77,8 +104,8 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
         onComplete();
         return;
       }
+      setPhase("briefing");
       setTurnIndex(next);
-      setPhase("speaking");
     }, ACKNOWLEDGE_MS);
   };
 
@@ -116,20 +143,28 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
   };
 
   const caption =
-    phase === "listening"
-      ? "Listening…"
-      : phase === "heard"
-        ? `“${turn.mockReply}”`
-        : turn.assistant;
+    phase === "briefing"
+      ? turn.brief
+      : phase === "listening"
+        ? "Listening…"
+        : phase === "heard"
+          ? `“${turn.mockReply}”`
+          : turn.question;
   const captionKey =
-    phase === "listening" ? "listening" : phase === "heard" ? `${turn.id}-reply` : `${turn.id}-question`;
+    phase === "briefing"
+      ? `${turn.id}-brief`
+      : phase === "listening"
+        ? "listening"
+        : phase === "heard"
+          ? `${turn.id}-reply`
+          : `${turn.id}-question`;
 
   const canPress = phase === "ready" || phase === "listening";
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <h1 className="sr-only">
-        Question {questionNumber} of {totalTurns}
+        Segment {segmentNumber} of {totalTurns}: {turn.topic}
       </h1>
 
       <div className="radio">
@@ -140,13 +175,13 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
           <div
             className="leds"
             role="progressbar"
-            aria-label="Check-in progress"
+            aria-label="Show progress"
             aria-valuemin={1}
             aria-valuemax={totalTurns}
-            aria-valuenow={questionNumber}
-            aria-valuetext={`Question ${questionNumber} of ${totalTurns}`}
+            aria-valuenow={segmentNumber}
+            aria-valuetext={`Segment ${segmentNumber} of ${totalTurns}`}
           >
-            {checkInScript.map((item, index) => (
+            {segments.map((item, index) => (
               <span
                 key={item.id}
                 className="led"
@@ -159,10 +194,15 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
         </div>
 
         <div className="radio-screen" data-phase={phase} aria-live="polite" aria-atomic="true">
+          <p className="radio-topic">
+            <SegmentIcon kind={turn.kind} className="h-5 w-5" strokeWidth={2.5} />
+            {turn.topic}
+          </p>
           <AnimatePresence mode="wait">
             <motion.p
               key={captionKey}
               className="radio-caption"
+              data-size={phase === "briefing" ? "brief" : undefined}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -171,7 +211,10 @@ export function ActiveScreen({ onComplete }: ActiveScreenProps) {
               {caption}
             </motion.p>
           </AnimatePresence>
-          <Waveform bars={9} active={phase === "speaking" || phase === "listening"} />
+          <Waveform
+            bars={9}
+            active={phase === "briefing" || phase === "speaking" || phase === "listening"}
+          />
         </div>
 
         <div className="radio-controls">
