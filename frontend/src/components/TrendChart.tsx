@@ -15,7 +15,7 @@ type TrendChartProps = {
   data: TrendPoint[];
 };
 
-const INK = "#1B1347";
+const INK = "#0F2E33";
 
 type DotProps = { cx?: number; cy?: number; index?: number };
 
@@ -33,7 +33,7 @@ export function TrendChart({ data }: TrendChartProps) {
           cx={cx}
           cy={cy}
           r={isToday ? 10 : 5}
-          fill={isToday ? "#FF8A78" : "#FFC72C"}
+          fill={isToday ? "#FF9873" : "#41CBBC"}
           stroke={INK}
           strokeWidth={isToday ? 3.5 : 2.5}
         />
@@ -68,22 +68,22 @@ export function TrendChart({ data }: TrendChartProps) {
   };
 
   return (
-    <Window title="Readiness Over 14 Days" tone="lilac" index={4}>
+    <Window title="Readiness Over 14 Days">
       <p className="m-0 text-[1.15rem] text-[var(--ink-soft)]">
         A simple look at how your score has been trending.
       </p>
 
       <div
-        className="mt-4 h-60 w-full"
+        className="mt-5 h-64 w-full"
         role="img"
         aria-label={`Line chart of your readiness over 14 days. It started at ${first.score} and today is ${today.score}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 22, right: 34, left: 0, bottom: 4 }}>
             {/* the same three zones as the gauge, kept very light */}
-            <ReferenceArea y1={50} y2={60} fill="#FF8A78" fillOpacity={0.3} />
-            <ReferenceArea y1={60} y2={80} fill="#FFC72C" fillOpacity={0.3} />
-            <ReferenceArea y1={80} y2={100} fill="#6FDCA3" fillOpacity={0.3} />
+            <ReferenceArea y1={50} y2={60} fill="#FF9873" fillOpacity={0.4} />
+            <ReferenceArea y1={60} y2={80} fill="#FFC6B2" fillOpacity={0.55} />
+            <ReferenceArea y1={80} y2={100} fill="#41CBBC" fillOpacity={0.3} />
             <XAxis
               dataKey="day"
               ticks={[first.day, "7", "Thu", today.day]}

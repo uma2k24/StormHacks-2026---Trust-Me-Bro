@@ -2,25 +2,21 @@ import type { CSSProperties, ReactNode } from "react";
 
 type WindowProps = {
   title: string;
-  tone?: "lilac" | "sky" | "pink" | "yellow" | "mint";
   /** Small plate on the right of the title bar. */
   aside?: ReactNode;
   /** Position in the entrance sequence (windows pop in one after another). */
   index?: number;
-  lift?: boolean;
   className?: string;
   bodyClassName?: string;
   padded?: boolean;
   children: ReactNode;
 };
 
-/** A 90s-desktop window: pinstriped title bar, close box, hard shadow. */
+/** A 90s-desktop window: pinstriped teal title bar, close box, hard shadow. */
 export function Window({
   title,
-  tone = "lilac",
   aside,
   index = 0,
-  lift = false,
   className = "",
   bodyClassName = "",
   padded = true,
@@ -31,10 +27,10 @@ export function Window({
   return (
     <section
       aria-labelledby={headingId}
-      className={`window pop-in ${lift ? "lift" : ""} ${className}`}
+      className={`window pop-in ${className}`}
       style={{ "--i": index } as CSSProperties}
     >
-      <div className={`titlebar tb-${tone}`}>
+      <div className="titlebar">
         <span className="titlebar-box" aria-hidden="true" />
         <h2 id={headingId} className="titlebar-title">
           {title}

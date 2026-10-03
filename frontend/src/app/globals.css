@@ -1,33 +1,41 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   "Memphis Desktop" design system
-   90s Mac-desktop windows + Memphis confetti, rebuilt for large, legible,
+   "Teal Desktop" design system
+   One colour theme: TEAL (calm, good, the app itself) and CORAL (the one warm
+   accent: main actions, live states, "pay attention"). Everything else is
+   cream paper and a very dark teal "ink".
+
+   90s-desktop windows + a little handheld radio, rebuilt for large, legible,
    high-contrast use. Every size is in rem so the in-app text-size control
    (and the browser's own font setting) scales the whole interface.
 
-   Contrast (WCAG): ink on paper 15.9:1, ink-soft on paper 8.5:1,
-   white on cobalt 7.6:1, ink on yellow 10.9:1, ink on status chips >= 7.4:1.
+   Contrast (WCAG): ink on paper 13.2:1, ink-soft on paper 8.3:1,
+   white on teal-deep 7.1:1, ink on teal 7.2:1, ink on coral 6.6:1,
+   ink on the soft tints >= 11:1.
    ========================================================================== */
 
 :root {
-  --paper: #fff6e0;
-  --paper-deep: #ffecc4;
+  --paper: #fbf5e6;
+  --paper-deep: #f1e6ce;
   --white: #ffffff;
-  --ink: #1b1347;
-  --ink-soft: #4a4270;
-  --cobalt: #2a35e8;
-  --yellow: #ffc72c;
-  --coral: #ff8a78;
-  --pink: #ff9fcf;
-  --lilac: #cfc6ff;
-  --sky: #9ad8ff;
-  --mint: #5fe0b0;
+  --ink: #0f2e33;
+  --ink-soft: #334d51;
+
+  --teal: #41cbbc;
+  --teal-deep: #0a6360;
+  --teal-soft: #cff0ea;
+  --teal-glow: #7ef0de;
+
+  --accent: #ff9873;
+  --accent-soft: #ffd9ca;
+  --accent-glow: #ffaa90;
+  --marker: #ffc6b0;
 
   /* readiness zones: Rest < 60 <= Pay Attention < 80 <= Ready */
-  --zone-rest: #ff8a78;
-  --zone-attention: #ffc72c;
-  --zone-ready: #6fdca3;
+  --zone-rest: #ff9873;
+  --zone-attention: #ffc6b2;
+  --zone-ready: #41cbbc;
 
   --line: 3px;
   --pop: 6px;
@@ -64,7 +72,7 @@ body {
   background-color: var(--paper);
   /* graph-paper dots */
   background-image: radial-gradient(
-    rgba(27, 19, 71, 0.14) 1.4px,
+    rgba(15, 46, 51, 0.13) 1.4px,
     transparent 1.6px
   );
   background-size: 26px 26px;
@@ -77,7 +85,7 @@ body {
 }
 
 ::selection {
-  background: var(--yellow);
+  background: var(--accent-soft);
   color: var(--ink);
 }
 
@@ -88,8 +96,8 @@ a {
 
 /* One obvious, high-contrast focus ring everywhere. */
 :focus-visible {
-  outline: 4px solid var(--cobalt);
-  outline-offset: 4px;
+  outline: 4px solid var(--ink);
+  outline-offset: 5px;
   border-radius: 0.5rem;
 }
 
@@ -138,7 +146,7 @@ a {
 .marker {
   background-image: linear-gradient(
     transparent 58%,
-    var(--yellow) 58% 94%,
+    var(--marker) 58% 94%,
     transparent 94%
   );
   background-repeat: no-repeat;
@@ -160,7 +168,7 @@ a {
   width: 100%;
   max-width: 36rem;
   margin-inline: auto;
-  padding-inline: 1rem;
+  padding-inline: 1.25rem;
 }
 
 .app-shell {
@@ -175,7 +183,10 @@ a {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-block: 1.25rem 1.75rem;
+  padding-block: 1.75rem 2rem;
+}
+.app-shell[data-screen="results"] .app-main {
+  padding-block: 1.25rem 1.25rem;
 }
 
 /* Mac-style menu bar */
@@ -193,7 +204,7 @@ a {
   gap: 0.75rem;
   max-width: 36rem;
   margin-inline: auto;
-  padding: 0.55rem 1rem;
+  padding: 0.55rem 1.25rem;
   min-height: 64px;
 }
 /* The menu bar is chrome: it stays a fixed size so the text-size control can
@@ -217,7 +228,6 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 @media (max-width: 359px) {
   .brand-name {
     display: none;
@@ -248,14 +258,14 @@ a {
   box-shadow: 0 3px 0 var(--ink);
 }
 .textsize button:hover {
-  background: var(--paper-deep);
+  background: var(--teal-soft);
 }
 .textsize button:active {
   transform: translateY(3px);
   box-shadow: 0 0 0 var(--ink);
 }
 .textsize button[aria-pressed="true"] {
-  background: var(--yellow);
+  background: var(--teal);
 }
 
 /* ---------- background confetti ---------------------------------------- */
@@ -286,35 +296,19 @@ a {
 }
 
 .titlebar {
-  --tb: var(--lilac);
   display: flex;
   align-items: center;
   gap: 0.65rem;
   min-height: 3.1rem;
   padding: 0.45rem 0.8rem;
   border-bottom: var(--line) solid var(--ink);
-  background-color: var(--tb);
+  background-color: var(--teal-soft);
   /* Mac Platinum pinstripes */
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0 3px,
-    rgba(27, 19, 71, 0.55) 3px 4px
+    rgba(15, 46, 51, 0.5) 3px 4px
   );
-}
-.tb-lilac {
-  --tb: var(--lilac);
-}
-.tb-sky {
-  --tb: var(--sky);
-}
-.tb-pink {
-  --tb: var(--pink);
-}
-.tb-yellow {
-  --tb: var(--yellow);
-}
-.tb-mint {
-  --tb: var(--mint);
 }
 
 .titlebar-box {
@@ -339,34 +333,15 @@ a {
   line-height: 1.3;
   letter-spacing: -0.01em;
 }
-.titlebar-aside {
-  margin-left: auto;
-  background: var(--white);
-  border: 2.5px solid var(--ink);
-  border-radius: 999px;
-  padding: 0.1rem 0.7rem;
-  font-weight: 700;
-  font-size: 1.05rem;
-}
 
 .window-body {
-  padding: 1.15rem 1.15rem 1.3rem;
+  padding: 1.5rem 1.4rem 1.6rem;
 }
 
-/* Entrance: windows pop in one after another */
+/* Entrance: things pop in one after another */
 .pop-in {
   animation: pop-in 0.55s var(--ease-spring) backwards;
   animation-delay: calc(var(--i, 0) * 90ms + 60ms);
-}
-
-@media (hover: hover) {
-  .window.lift {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .window.lift:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: calc(var(--pop) + 2px) calc(var(--pop) + 2px) 0 var(--ink);
-  }
 }
 
 /* ---------- buttons ------------------------------------------------------ */
@@ -402,15 +377,18 @@ a {
 .btn:disabled {
   cursor: not-allowed;
 }
-.btn-yellow {
-  background: var(--yellow);
+.btn-accent {
+  background: var(--accent);
+}
+.btn-teal {
+  background: var(--teal);
 }
 .btn-block {
   display: flex;
   width: 100%;
 }
 
-/* The big round hero buttons */
+/* The big round glossy buttons */
 .orb {
   position: relative;
   display: grid;
@@ -422,46 +400,51 @@ a {
   background:
     radial-gradient(
       circle at 30% 24%,
-      rgba(255, 255, 255, 0.75) 0 7%,
+      rgba(255, 255, 255, 0.7) 0 7%,
       transparent 34%
     ),
-    var(--yellow);
+    var(--accent);
   color: var(--ink);
   box-shadow: 8px 8px 0 var(--ink);
   cursor: pointer;
-  transition: transform 0.09s ease, box-shadow 0.09s ease, background 0.2s;
+  user-select: none;
+  touch-action: none;
+  transition: transform 0.09s ease, box-shadow 0.09s ease, opacity 0.2s;
 }
-.orb:hover:not(:disabled) {
+.orb:hover:not(:disabled):not(.orb-down) {
   transform: translate(-1px, -1px);
   box-shadow: 9px 9px 0 var(--ink);
 }
-.orb:active:not(:disabled) {
+.orb:active:not(:disabled),
+.orb-down {
   transform: translate(8px, 8px);
   box-shadow: 0 0 0 var(--ink);
 }
 .orb:disabled {
   cursor: default;
-}
-.orb-xl {
-  width: clamp(11.5rem, 56vw, 14rem);
-  height: clamp(11.5rem, 56vw, 14rem);
-}
-.orb-md {
-  width: 5.5rem;
-  height: 5.5rem;
-  box-shadow: 6px 6px 0 var(--ink);
-}
-.orb-md:active:not(:disabled) {
-  transform: translate(6px, 6px);
-}
-.orb-rec {
   background:
     radial-gradient(
       circle at 30% 24%,
-      rgba(255, 255, 255, 0.6) 0 7%,
+      rgba(255, 255, 255, 0.7) 0 7%,
       transparent 34%
     ),
-    var(--coral);
+    var(--teal-soft);
+}
+.orb-xl {
+  width: clamp(9.5rem, min(58vw, 31dvh), 14.5rem);
+  height: clamp(9.5rem, min(58vw, 31dvh), 14.5rem);
+}
+.orb-lg {
+  width: 7.25rem;
+  height: 7.25rem;
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.orb-lg:hover:not(:disabled):not(.orb-down) {
+  box-shadow: 7px 7px 0 var(--ink);
+}
+.orb-lg:active:not(:disabled),
+.orb-lg.orb-down {
+  transform: translate(6px, 6px);
 }
 
 /* Sonar rings that breathe out from a button */
@@ -496,17 +479,6 @@ a {
   display: none;
 }
 
-/* Rotating "TAP TO TALK" ring */
-.badge-ring {
-  position: absolute;
-  top: -2.2rem;
-  left: -2.2rem;
-  width: calc(100% + 4.4rem);
-  height: calc(100% + 4.4rem);
-  pointer-events: none;
-  animation: spin 38s linear infinite;
-}
-
 /* ---------- chips -------------------------------------------------------- */
 
 .chip {
@@ -525,156 +497,159 @@ a {
 .chip svg {
   flex: none;
 }
+/* Ready = teal, Pay Attention = soft coral, Rest = coral: the warmer, the further from ready. */
 .chip-ok {
-  background: var(--zone-ready);
+  background: var(--teal-soft);
 }
 .chip-warn {
-  background: var(--zone-attention);
+  background: var(--accent-soft);
 }
 .chip-rest {
-  background: var(--zone-rest);
+  background: var(--accent);
 }
 
-/* ---------- step lights (conversation progress) ------------------------- */
+/* ---------- little stat card (idle) ------------------------------------- */
 
-.steps {
+.stat {
   display: flex;
-  gap: 0.5rem;
-}
-.step {
-  flex: 1;
-  height: 0.95rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 1.1rem 1.3rem;
   background: var(--white);
-  border: 2.5px solid var(--ink);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+/* ---------- the radio (conversation) ------------------------------------ */
+
+.radio {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  padding: 1.25rem 1.25rem 1.6rem;
+  background: var(--teal);
+  border: var(--line) solid var(--ink);
+  border-radius: 1.9rem;
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.radio-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline: 0.25rem;
+}
+
+/* a row of speaker slots */
+.radio-grille {
+  display: flex;
+  gap: 7px;
+}
+.radio-grille i {
+  display: block;
+  width: 7px;
+  height: 1.6rem;
+  background: var(--ink);
   border-radius: 999px;
+  opacity: 0.8;
+}
+
+/* progress lamps */
+.leds {
+  display: flex;
+  gap: 0.6rem;
+}
+.led {
+  width: 1rem;
+  height: 1rem;
+  background: rgba(15, 46, 51, 0.28);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
   transition: background 0.3s;
 }
-.step[data-state="done"] {
-  background: var(--ink);
+.led[data-state="done"] {
+  background: var(--paper);
 }
-.step[data-state="current"] {
-  background: var(--yellow);
+.led[data-state="current"] {
+  background: var(--accent);
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* ---------- chat --------------------------------------------------------- */
-
-.chat-well {
+/* the screen: one line of text at a time */
+.radio-screen {
+  position: relative;
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  min-height: 13rem;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  padding: 1rem 0.35rem 1.1rem 0.15rem;
-  scroll-behavior: smooth;
-  /* soften the edges as messages scroll under them */
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 0.8rem,
-    #000 calc(100% - 0.8rem),
-    transparent 100%
-  );
-}
-.bubble {
-  max-width: 90%;
-  padding: 0.9rem 1.1rem 1rem;
-  font-size: 1.375rem;
-  line-height: 1.35;
-  border: var(--line) solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-}
-.bubble-assistant {
-  background: var(--white);
-  color: var(--ink);
-  border-radius: 1.3rem 1.3rem 1.3rem 0.3rem;
-}
-.bubble-user {
-  background: var(--cobalt);
-  color: var(--white);
-  border-radius: 1.3rem 1.3rem 0.3rem 1.3rem;
-}
-.bubble-tag {
-  display: inline-block;
-  margin-bottom: 0.45rem;
-  padding: 0.05rem 0.6rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.12em;
-  background: var(--yellow);
-  border: 2.5px solid var(--ink);
-  border-radius: 999px;
-}
-
-/* ---------- LCD display + waveform -------------------------------------- */
-
-.lcd {
-  position: relative;
-  display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-  min-height: 4.4rem;
-  padding: 0.5rem 1rem;
+  gap: 1.5rem;
+  padding: 1.5rem 1.25rem;
   overflow: hidden;
+  text-align: center;
   background: var(--ink);
-  color: var(--yellow);
+  color: var(--teal-glow);
   border: var(--line) solid var(--ink);
-  border-radius: 0.9rem;
+  border-radius: 1.2rem;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.12);
+  transition: color 0.25s;
 }
 /* faint CRT scanlines */
-.lcd::after {
+.radio-screen::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.06) 0 1px,
+    rgba(255, 255, 255, 0.05) 0 1px,
     transparent 1px 4px
   );
 }
-.lcd-text {
+.radio-screen[data-phase="listening"] {
+  color: var(--accent-glow);
+}
+.radio-screen[data-phase="heard"] {
+  color: var(--paper);
+}
+.radio-caption {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 100%;
   font-family: var(--ff-head);
   font-weight: 800;
   font-optical-sizing: none;
-  font-variation-settings: "opsz" 24, "wdth" 100;
-  font-size: 1.6rem;
-  line-height: 1.1;
-  text-shadow: 0 0 14px rgba(255, 199, 44, 0.45);
+  font-variation-settings: "opsz" 36, "wdth" 100;
+  font-size: clamp(1.9rem, 8.2vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  text-shadow: 0 0 18px currentColor;
 }
-/* At the bigger text sizes there's no room for the bars beside the words. */
-html[data-text-size="large"] .lcd .eq,
-html[data-text-size="largest"] .lcd .eq {
-  display: none;
-}
-.lcd-mint {
-  color: var(--mint);
-}
-.lcd-mint .lcd-text {
-  text-shadow: 0 0 14px rgba(95, 224, 176, 0.45);
+.radio-screen .eq {
+  position: relative;
+  z-index: 1;
 }
 
-.dock {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1rem 1.15rem;
-  background: var(--white);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: var(--pop) var(--pop) 0 var(--ink);
+.radio-controls {
+  display: grid;
+  place-items: center;
 }
+
+/* ---------- waveform ----------------------------------------------------- */
 
 .eq {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   height: 2.2rem;
 }
 .eq span {
@@ -688,13 +663,11 @@ html[data-text-size="largest"] .lcd .eq {
   animation-delay: var(--o, 0s);
   transform: scaleY(0.35);
 }
-
-.rec-dot {
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: 50%;
-  background: var(--coral);
-  animation: blink 1s steps(2, jump-none) infinite;
+/* resting: a calm line of dots */
+.eq[data-active="false"] span {
+  animation: none;
+  transform: scaleY(0.12);
+  opacity: 0.55;
 }
 
 /* ---------- progress blocks (processing) -------------------------------- */
@@ -715,7 +688,7 @@ html[data-text-size="largest"] .lcd .eq {
   transition: background 0.2s, transform 0.25s var(--ease-spring);
 }
 .blocks span[data-on="true"] {
-  background: var(--cobalt);
+  background: var(--teal);
   transform: scaleY(1.02);
 }
 
@@ -724,7 +697,7 @@ html[data-text-size="largest"] .lcd .eq {
 .gauge {
   display: block;
   width: 100%;
-  max-width: 22rem;
+  max-width: 19rem;
   height: auto;
   margin-inline: auto;
   overflow: visible;
@@ -744,21 +717,77 @@ html[data-text-size="largest"] .lcd .eq {
 .vital {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1.1rem 1.15rem;
+  gap: 0.85rem;
+  padding: 0.75rem 1.1rem;
 }
 .vital + .vital {
-  border-top: var(--line) dashed rgba(27, 19, 71, 0.35);
+  border-top: var(--line) dashed rgba(15, 46, 51, 0.3);
 }
 .vital-icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 2.9rem;
+  height: 2.9rem;
+  background: var(--teal-soft);
   border: 2.5px solid var(--ink);
   border-radius: 50%;
   box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ---------- pager (results, one thing at a time) ------------------------ */
+
+.pager-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+  padding-block: 0 1rem;
+}
+.pager-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1rem 0 0.25rem;
+  background: linear-gradient(to bottom, transparent, var(--paper) 28%);
+}
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+}
+.dot {
+  width: 0.95rem;
+  height: 0.95rem;
+  background: var(--white);
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  transition: background 0.25s, transform 0.25s var(--ease-spring);
+}
+.dot[data-state="done"] {
+  background: var(--ink);
+}
+.dot[data-state="current"] {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+.pager-buttons {
+  display: flex;
+  gap: 0.9rem;
+}
+.pager-buttons .btn {
+  font-size: 1.2rem;
+  gap: 0.6rem;
+  padding-inline: 1.1rem;
+  text-wrap: balance;
+}
+.pager-buttons .btn-back {
+  flex: none;
+  min-width: 4rem;
 }
 
 /* ---------- keyframes ---------------------------------------------------- */
@@ -777,11 +806,6 @@ html[data-text-size="largest"] .lcd .eq {
     transform: translate3d(0, -14px, 0) rotate(calc(var(--rot, 0deg) + 7deg));
   }
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 @keyframes sonar {
   0% {
     transform: scale(1);
@@ -798,14 +822,9 @@ html[data-text-size="largest"] .lcd .eq {
     transform: translateY(22px) scale(0.96) rotate(-0.8deg);
   }
 }
-@keyframes blink {
-  50% {
-    opacity: 0.35;
-  }
-}
 @keyframes pulse {
   50% {
-    opacity: 0.6;
+    opacity: 0.55;
   }
 }
 @keyframes eq {
@@ -843,5 +862,8 @@ html[data-text-size="largest"] .lcd .eq {
   }
   .eq span {
     transform: scaleY(0.7);
+  }
+  .eq[data-active="false"] span {
+    transform: scaleY(0.12);
   }
 }

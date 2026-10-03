@@ -76,7 +76,7 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
   const shown = useCountUp(clamped);
 
   return (
-    <Window title="Today's Readiness" tone="lilac" index={1}>
+    <Window title="Today's Readiness" index={1}>
       <div
         className="flex flex-col items-center text-center"
         role="img"
@@ -93,7 +93,7 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
               key={zone.from}
               d={sector(zone.from, zone.to)}
               fill={zone.fill}
-              stroke="#1B1347"
+              stroke="var(--ink)"
               strokeWidth="3.5"
               strokeLinejoin="round"
             />
@@ -110,17 +110,17 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
                 y1={y0}
                 x2={x1}
                 y2={y1}
-                stroke="#1B1347"
+                stroke="var(--ink)"
                 strokeWidth={index % 5 === 0 ? 4 : 2.5}
                 strokeLinecap="round"
               />
             );
           })}
 
-          <text x="34" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="#1B1347">
+          <text x="34" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="var(--ink)">
             0
           </text>
-          <text x="266" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="#1B1347">
+          <text x="266" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="var(--ink)">
             100
           </text>
 
@@ -128,8 +128,8 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
             <g className="needle-hum">
               <polygon
                 points={`${CX - NEEDLE_LEN},${CY} ${CX},${CY - 9} ${CX},${CY + 9}`}
-                fill="#1B1347"
-                stroke="#1B1347"
+                fill="var(--ink)"
+                stroke="var(--ink)"
                 strokeWidth="4"
                 strokeLinejoin="round"
               />
@@ -137,11 +137,11 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
           </g>
 
           {/* hub sits above the needle */}
-          <circle cx={CX} cy={CY} r="19" fill="#1B1347" />
-          <circle cx={CX} cy={CY} r="7" fill="#FFC72C" />
+          <circle cx={CX} cy={CY} r="19" fill="var(--ink)" />
+          <circle cx={CX} cy={CY} r="7" fill="var(--accent)" />
         </svg>
 
-        <p className="display mt-1 text-[5.5rem] leading-none tabular-nums" aria-hidden="true">
+        <p className="display mt-1 text-[4.5rem] leading-none tabular-nums" aria-hidden="true">
           {shown}
         </p>
         <p className="display mt-2 text-[1.5rem] text-[var(--ink-soft)]" aria-hidden="true">

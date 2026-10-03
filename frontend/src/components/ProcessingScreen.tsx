@@ -42,20 +42,17 @@ export function ProcessingScreen({ onComplete }: ProcessingScreenProps) {
 
   return (
     <section className="flex flex-1 flex-col justify-center py-4">
-      <Window title="Working…" tone="sky" className="w-full">
-        <div className="flex flex-col items-center gap-6 py-3 text-center">
+      <Window title="Working…" className="w-full">
+        <div className="flex flex-col items-center gap-9 py-3 text-center">
           <div
-            className="grid h-24 w-24 place-items-center rounded-full border-[3px] border-[var(--ink)] bg-[var(--yellow)] text-[var(--ink)] shadow-[4px_4px_0_var(--ink)]"
+            className="grid h-24 w-24 place-items-center rounded-full border-[3px] border-[var(--ink)] bg-[var(--teal)] text-[var(--ink)] shadow-[4px_4px_0_var(--ink)]"
             aria-hidden="true"
           >
             <Waveform bars={7} />
           </div>
 
-          <div className="space-y-2" aria-live="polite">
-            <p
-              key={MESSAGES[messageIndex]}
-              className="display h2 pop-in"
-            >
+          <div className="space-y-3" aria-live="polite">
+            <p key={MESSAGES[messageIndex]} className="display h2 pop-in">
               {MESSAGES[messageIndex]}
             </p>
             <p className="lede">Please wait a moment.</p>

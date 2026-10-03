@@ -22,4 +22,8 @@ export const checkInScript: CheckInTurn[] = [
   },
 ];
 
-export const LISTEN_MS = 2500;
+// Timings for the radio screen. Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
+export const RECEIVE_MS = 900; // the question "arrives" before the talk button wakes up
+export const LISTEN_MS = 2500; // a mock answer listens this long, then sends itself
+export const ACKNOWLEDGE_MS = 1600; // your own words stay on the screen this long
+export const MIN_HOLD_MS = 280; // a press shorter than this is a tap, not a hold

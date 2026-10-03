@@ -13,13 +13,13 @@ export function AiSummaryCard({ summary }: AiSummaryCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <Window title="Your Voice Summary" tone="pink" index={2}>
-      <p className="m-0 text-[1.375rem] leading-[1.5]">{summary}</p>
+    <Window title="Your Voice Summary">
+      <p className="m-0 text-[1.5rem] leading-[1.5]">{summary}</p>
 
       <button
         type="button"
         onClick={() => setIsPlaying((value) => !value)}
-        className={`btn btn-block mt-5 ${isPlaying ? "btn-yellow" : ""}`}
+        className={`btn btn-block mt-7 ${isPlaying ? "btn-teal" : ""}`}
         aria-label={isPlaying ? "Pause voice summary" : "Play voice summary"}
         aria-pressed={isPlaying}
       >
@@ -33,7 +33,7 @@ export function AiSummaryCard({ summary }: AiSummaryCardProps) {
 
       {isPlaying ? (
         <div
-          className="mt-4 flex items-center gap-3 text-[var(--cobalt)]"
+          className="mt-4 flex items-center gap-3 text-[var(--teal-deep)]"
           aria-live="polite"
         >
           <Waveform bars={9} />

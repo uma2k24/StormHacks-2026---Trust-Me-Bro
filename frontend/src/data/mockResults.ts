@@ -64,9 +64,9 @@ export function statusColorForScore(score: number): StatusColor {
   return "red";
 }
 
-// Zone fills shared by the gauge, the trend chart bands and the status chips.
+// Zone fills shared by the gauge and the trend chart bands: teal for ready, then warmer coral the further from ready.
 export const statusHex: Record<StatusColor, string> = {
-  green: "#6fdca3",
-  yellow: "#ffc72c",
-  red: "#ff8a78",
+  green: "#41cbbc",
+  yellow: "#ffc6b2",
+  red: "#ff9873",
 };

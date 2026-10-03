@@ -1,8 +1,8 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { Mic } from "lucide-react";
 import { StatusChip } from "@/components/StatusChip";
-import { Window } from "@/components/Window";
 import { statusColorForScore } from "@/data/mockResults";
 
 type IdleScreenProps = {
@@ -12,8 +12,6 @@ type IdleScreenProps = {
   onStart: () => void;
 };
 
-const RING_TEXT = "TAP TO TALK • TAP TO TALK • TAP TO TALK • ";
-
 export function IdleScreen({
   userName,
   yesterdayScore,
@@ -21,44 +19,17 @@ export function IdleScreen({
   onStart,
 }: IdleScreenProps) {
   return (
-    <section className="flex flex-1 flex-col items-center justify-between gap-12 pt-2 text-center">
+    <section className="flex flex-1 flex-col items-center justify-between gap-14 text-center">
       <header className="w-full">
         <h1 className="display h1">
           Good Morning, <span className="marker">{userName}</span>.
         </h1>
-        <p className="lede mx-auto mt-4 max-w-[22rem]">
+        <p className="lede mx-auto mt-5 max-w-[22rem]">
           Want to check in? Just tap and we&apos;ll talk.
         </p>
       </header>
 
       <div className="sonar rounded-full">
-        <svg
-          className="badge-ring"
-          viewBox="0 0 300 300"
-          aria-hidden="true"
-        >
-          <defs>
-            <path
-              id="badge-ring-path"
-              d="M150,150 m-128,0 a128,128 0 1,1 256,0 a128,128 0 1,1 -256,0"
-            />
-          </defs>
-          <text
-            fill="#4A4270"
-            fontFamily="var(--ff-ui)"
-            fontWeight="700"
-            fontSize="21"
-          >
-            <textPath
-              href="#badge-ring-path"
-              textLength="796"
-              lengthAdjust="spacing"
-            >
-              {RING_TEXT}
-            </textPath>
-          </text>
-        </svg>
-
         <button
           type="button"
           onClick={onStart}
@@ -70,17 +41,25 @@ export function IdleScreen({
         </button>
       </div>
 
-      <Window title="Yesterday" tone="pink" index={1} className="w-full text-left">
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="display text-[3.4rem] leading-none tabular-nums">
+      <div
+        className="stat pop-in w-full text-left"
+        style={{ "--i": 1 } as CSSProperties}
+        role="group"
+        aria-label={`Yesterday: ${yesterdayScore} — ${yesterdayLabel}`}
+      >
+        <span className="text-[1.25rem] font-bold text-[var(--ink-soft)]">
+          Yesterday
+        </span>
+        <span className="flex items-center gap-4">
+          <span className="display text-[2.6rem] leading-none tabular-nums">
             {yesterdayScore}
           </span>
           <StatusChip
             status={statusColorForScore(yesterdayScore)}
             label={yesterdayLabel}
           />
-        </p>
-      </Window>
+        </span>
+      </div>
     </section>
   );
 }

@@ -4,12 +4,14 @@ import type { CSSProperties } from "react";
 
 type WaveformProps = {
   bars?: number;
+  /** Dances when true, rests as a calm line of dots when false. */
+  active?: boolean;
 };
 
-/** Equalizer bars that dance while we listen. Colour follows the parent's text colour. */
-export function Waveform({ bars = 14 }: WaveformProps) {
+/** Equalizer bars. Colour follows the parent's text colour. */
+export function Waveform({ bars = 14, active = true }: WaveformProps) {
   return (
-    <div className="eq" aria-hidden="true">
+    <div className="eq" data-active={active} aria-hidden="true">
       {Array.from({ length: bars }).map((_, index) => (
         <span
           key={index}
