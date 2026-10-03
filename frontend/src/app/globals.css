@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0f14;
+  --foreground: #f8fafc;
+  --surface: #151c24;
+  --accent: #f5c518;
+  --accent-soft: #ffe566;
+  --ready: #3ddc84;
+  --caution: #f5c518;
+  --alert: #ff6b6b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-lexend);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(245, 197, 24, 0.08), transparent 38%),
+    linear-gradient(180deg, #0d141d 0%, #0a0f14 45%, #070b10 100%);
+  color: var(--foreground);
+  font-family: var(--font-lexend), "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(245, 197, 24, 0.35);
+  color: #fff;
+}

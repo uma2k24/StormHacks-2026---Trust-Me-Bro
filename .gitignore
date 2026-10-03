@@ -4,3 +4,15 @@ __pycache__/
 venv/
 .venv/
 node_modules/
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+.swiftpm/
+.DS_Store

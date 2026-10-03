@@ -1,0 +1,322 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5AAD0ECEDBF546AF9B14FB1F /* VoiceReadinessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0695B15903462096C12215 /* VoiceReadinessApp.swift */; };
+		325EF20AC282449689F52A85 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51330C3F293C400193C03B0A /* ContentView.swift */; };
+		6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */; };
+		8E5235201F9F4B048822348A /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0131046926C7453DB0A2718C /* IdleView.swift */; };
+		E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E56B5488BD045F087A32E49 /* RecordingView.swift */; };
+		0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5729BE7C8004650B2F05570 /* ProcessingView.swift */; };
+		1F717FF4AEBE4ABBBE3CA170 /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6289B03D9FD94A6292C4C643 /* ResultsView.swift */; };
+		48348717F7C14C1CB2A19E47 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65C4DE7F564C48A5992BB714 /* WaveformView.swift */; };
+		0C6F1D7220DC4376BCAF36E6 /* CircularProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92393E3EB2FA4DFDA87C4FDC /* CircularProgressRing.swift */; };
+		4D3835FA7265468E8E754E4F /* ReadinessDial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D33F29E7CBF4AD0BB86DF10 /* ReadinessDial.swift */; };
+		CE719BF919B545C196EFE662 /* AiSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */; };
+		04BF0BF51CC94E85A79B3963 /* VitalsGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */; };
+		D82FC20750CE4657873CC6EF /* TrendChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0223900F4B4CFD98FE069E /* TrendChartView.swift */; };
+		DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 623F283978454BC98621FE5A /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		048A2542A1154AA9ADA7733E /* VoiceReadiness.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceReadiness.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0695B15903462096C12215 /* VoiceReadinessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceReadinessApp.swift; sourceTree = "<group>"; };
+		51330C3F293C400193C03B0A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreeningModels.swift; sourceTree = "<group>"; };
+		0131046926C7453DB0A2718C /* IdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
+		9E56B5488BD045F087A32E49 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
+		E5729BE7C8004650B2F05570 /* ProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingView.swift; sourceTree = "<group>"; };
+		6289B03D9FD94A6292C4C643 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
+		65C4DE7F564C48A5992BB714 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		92393E3EB2FA4DFDA87C4FDC /* CircularProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularProgressRing.swift; sourceTree = "<group>"; };
+		4D33F29E7CBF4AD0BB86DF10 /* ReadinessDial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessDial.swift; sourceTree = "<group>"; };
+		0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiSummaryCard.swift; sourceTree = "<group>"; };
+		9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalsGrid.swift; sourceTree = "<group>"; };
+		0B0223900F4B4CFD98FE069E /* TrendChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendChartView.swift; sourceTree = "<group>"; };
+		623F283978454BC98621FE5A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		37385F5EE1EA42EA8A0480B3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		86A245085D4B497CB809F782 = {
+			isa = PBXGroup;
+			children = (
+				4A475688166D46F1830230FB /* VoiceReadiness */,
+				4F5D6CBAC3E54D2C95ECFE48 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4F5D6CBAC3E54D2C95ECFE48 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				048A2542A1154AA9ADA7733E /* VoiceReadiness.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4A475688166D46F1830230FB /* VoiceReadiness */ = {
+			isa = PBXGroup;
+			children = (
+				1A0695B15903462096C12215 /* VoiceReadinessApp.swift */,
+				51330C3F293C400193C03B0A /* ContentView.swift */,
+				93501A6CE42441BDAB141062 /* Models */,
+				990A8A2ACD9E4822B54161B8 /* Views */,
+				623F283978454BC98621FE5A /* Assets.xcassets */,
+			);
+			path = VoiceReadiness;
+			sourceTree = "<group>";
+		};
+		93501A6CE42441BDAB141062 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		990A8A2ACD9E4822B54161B8 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0131046926C7453DB0A2718C /* IdleView.swift */,
+				9E56B5488BD045F087A32E49 /* RecordingView.swift */,
+				E5729BE7C8004650B2F05570 /* ProcessingView.swift */,
+				6289B03D9FD94A6292C4C643 /* ResultsView.swift */,
+				9EE3413345544C688AF8D169 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		9EE3413345544C688AF8D169 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				65C4DE7F564C48A5992BB714 /* WaveformView.swift */,
+				92393E3EB2FA4DFDA87C4FDC /* CircularProgressRing.swift */,
+				4D33F29E7CBF4AD0BB86DF10 /* ReadinessDial.swift */,
+				0B21C052F45641729EC0AE16 /* AiSummaryCard.swift */,
+				9CF1842F67FD4AFF956A8200 /* VitalsGrid.swift */,
+				0B0223900F4B4CFD98FE069E /* TrendChartView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BEC44A9295B54C8C9965C2C8 /* VoiceReadiness */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3D2FB187F6854670A45B9882 /* Build configuration list for PBXNativeTarget "VoiceReadiness" */;
+			buildPhases = (
+				562183E46070446FA645C2AF /* Sources */,
+				37385F5EE1EA42EA8A0480B3 /* Frameworks */,
+				FE422B5E2B1B41CBBBF3F9DD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VoiceReadiness;
+			productName = VoiceReadiness;
+			productReference = 048A2542A1154AA9ADA7733E /* VoiceReadiness.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8702CBAB92614662B2D5120D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					BEC44A9295B54C8C9965C2C8 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 727ACBABAA3C4F05B8EB2E8F /* Build configuration list for PBXProject "VoiceReadiness" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 86A245085D4B497CB809F782;
+			productRefGroup = 4F5D6CBAC3E54D2C95ECFE48 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BEC44A9295B54C8C9965C2C8 /* VoiceReadiness */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FE422B5E2B1B41CBBBF3F9DD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		562183E46070446FA645C2AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AAD0ECEDBF546AF9B14FB1F /* VoiceReadinessApp.swift in Sources */,
+				325EF20AC282449689F52A85 /* ContentView.swift in Sources */,
+				6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */,
+				8E5235201F9F4B048822348A /* IdleView.swift in Sources */,
+				E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */,
+				0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */,
+				1F717FF4AEBE4ABBBE3CA170 /* ResultsView.swift in Sources */,
+				48348717F7C14C1CB2A19E47 /* WaveformView.swift in Sources */,
+				0C6F1D7220DC4376BCAF36E6 /* CircularProgressRing.swift in Sources */,
+				4D3835FA7265468E8E754E4F /* ReadinessDial.swift in Sources */,
+				CE719BF919B545C196EFE662 /* AiSummaryCard.swift in Sources */,
+				04BF0BF51CC94E85A79B3963 /* VitalsGrid.swift in Sources */,
+				D82FC20750CE4657873CC6EF /* TrendChartView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		944F89E4A504460782E6C44E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		58AD4B6892AD4C74A45ABA65 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9C0995E970964B6FA329EBCB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Voice Readiness";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voice Readiness uses the microphone for your daily voice check-in.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stormhacks.VoiceReadiness;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		675DCE897F4A4CC884BFAF92 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Voice Readiness";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voice Readiness uses the microphone for your daily voice check-in.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stormhacks.VoiceReadiness;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		727ACBABAA3C4F05B8EB2E8F /* Build configuration list for PBXProject "VoiceReadiness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				944F89E4A504460782E6C44E /* Debug */,
+				58AD4B6892AD4C74A45ABA65 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3D2FB187F6854670A45B9882 /* Build configuration list for PBXNativeTarget "VoiceReadiness" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9C0995E970964B6FA329EBCB /* Debug */,
+				675DCE897F4A4CC884BFAF92 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8702CBAB92614662B2D5120D /* Project object */;
+}
