@@ -1,0 +1,95 @@
+{
+  "dataset": "mdvr_kcl",
+  "source_url": "https://zenodo.org/records/2867216",
+  "doi": "10.5281/zenodo.2867216",
+  "intended_role": "external_evaluation",
+  "recording_count": 73,
+  "speaker_count": 37,
+  "speakers_by_label": {
+    "HC": 21,
+    "PD": 16
+  },
+  "tasks": {
+    "reading": {
+      "recordings": 37,
+      "HC": 21,
+      "PD": 16
+    },
+    "spontaneous": {
+      "recordings": 36,
+      "HC": 21,
+      "PD": 15
+    }
+  },
+  "missing_tasks": {
+    "mdvr_kcl:ID18": [
+      "spontaneous"
+    ]
+  },
+  "audio_formats": [
+    {
+      "sample_rate_hz": 44100,
+      "channels": 1,
+      "sample_width_bits": 24
+    }
+  ],
+  "duration_range_s": [
+    73.03902494331066,
+    220.63916099773243
+  ],
+  "duration_total_s": 10318.48927437642,
+  "missing_age_speaker_ids": [
+    "mdvr_kcl:ID00",
+    "mdvr_kcl:ID01",
+    "mdvr_kcl:ID02",
+    "mdvr_kcl:ID03",
+    "mdvr_kcl:ID04",
+    "mdvr_kcl:ID05",
+    "mdvr_kcl:ID06",
+    "mdvr_kcl:ID07",
+    "mdvr_kcl:ID08",
+    "mdvr_kcl:ID09",
+    "mdvr_kcl:ID10",
+    "mdvr_kcl:ID11",
+    "mdvr_kcl:ID12",
+    "mdvr_kcl:ID13",
+    "mdvr_kcl:ID14",
+    "mdvr_kcl:ID15",
+    "mdvr_kcl:ID16",
+    "mdvr_kcl:ID17",
+    "mdvr_kcl:ID18",
+    "mdvr_kcl:ID19",
+    "mdvr_kcl:ID20",
+    "mdvr_kcl:ID21",
+    "mdvr_kcl:ID22",
+    "mdvr_kcl:ID23",
+    "mdvr_kcl:ID24",
+    "mdvr_kcl:ID25",
+    "mdvr_kcl:ID26",
+    "mdvr_kcl:ID27",
+    "mdvr_kcl:ID28",
+    "mdvr_kcl:ID29",
+    "mdvr_kcl:ID30",
+    "mdvr_kcl:ID31",
+    "mdvr_kcl:ID32",
+    "mdvr_kcl:ID33",
+    "mdvr_kcl:ID34",
+    "mdvr_kcl:ID35",
+    "mdvr_kcl:ID36"
+  ],
+  "missing_sex_speaker_count": 37,
+  "age_metadata_complete": false,
+  "known_age_under_50_speaker_count": 0,
+  "filename_separator_anomalies": [
+    "SpontaneousDialogue/HC/ID22hc_0_0_0.wav"
+  ],
+  "audio_headers_readable": true,
+  "quality_checks_completed": false,
+  "features_extracted": false,
+  "notes": [
+    "Header inspection does not assess silence, clipping, speech content, or speaker isolation.",
+    "Missing ages must come from source metadata; they are never inferred from audio or filenames.",
+    "Reading and spontaneous recordings are not sustained vowels; use a task-matched model.",
+    "Keep this dataset out of model selection if it remains the independent external test."
+  ]
+}

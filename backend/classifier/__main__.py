@@ -4,8 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from .core import MODEL_NAMES, VoiceClassifier, evaluate_external, train
 from .data import DEFAULT_FEATURES, read_feature_csv
+from .mdvr import prepare_mdvr
 
 
 def write_json(path: Path, value: dict) -> None:
@@ -16,6 +19,14 @@ def write_json(path: Path, value: dict) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Research voice classifier; consumes extracted feature CSVs.")
     commands = parser.add_subparsers(dest="command", required=True)
+    extraction = commands.add_parser("extract", help="Extract Parselmouth + eGeMAPSv02 features and a quality report from a manifest.")
+    extraction.add_argument("--manifest", type=Path, required=True)
+    extraction.add_argument("--audio-root", type=Path, default=Path("."), help="Base for manifest file_path values; default is current directory.")
+    extraction.add_argument("--output", type=Path, required=True, help="Feature CSV destination.")
+    preparation = commands.add_parser("prepare-mdvr", help="Build an MDVR-KCL manifest and header audit; unknown ages stay blank.")
+    preparation.add_argument("--root", type=Path, required=True, help="Directory containing ReadText and SpontaneousDialogue.")
+    preparation.add_argument("--metadata", type=Path, help="Verified speaker_id/age/sex CSV, one row per person.")
+    preparation.add_argument("--output", type=Path, required=True, help="Recording manifest .csv destination.")
     training = commands.add_parser("train", help="Evaluate a fixed baseline using speaker-separated CV, then save it.")
     training.add_argument("--csv", required=True)
     training.add_argument("--dataset", required=True, help="Provenance name, e.g. italian_pvs.")
@@ -36,7 +47,54 @@ def main(argv: list[str] | None = None) -> int:
     prediction.add_argument("--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "train":
+        if args.command == "extract":
+            from backend.audio.batch import extract_manifest
+
+            if args.output.suffix != ".csv" or args.output.resolve() == args.manifest.resolve():
+                raise ValueError("Feature output must be a .csv distinct from the input manifest.")
+            report_path = args.output.with_suffix(".quality.json")
+            schema_path = args.output.with_suffix(".features.json")
+            ready_path = args.output.with_suffix(".ready.csv")
+            if args.manifest.resolve() in {path.resolve() for path in (report_path, schema_path, ready_path)}:
+                raise ValueError("Extraction outputs cannot overwrite the input manifest.")
+            import sys
+
+            def progress(count, total, status):
+                print(f"Extracted {count}/{total}: {status}", file=sys.stderr, flush=True)
+
+            frame, report = extract_manifest(read_feature_csv(str(args.manifest)), audio_root=args.audio_root, progress=progress)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            frame.to_csv(args.output, index=False)
+            ages = pd.to_numeric(frame["age"], errors="coerce")
+            ready = frame.loc[frame["quality_passed"] & ages.between(50, 120)].copy()
+            ready.to_csv(ready_path, index=False)
+            report["ready_recording_count"] = len(ready)
+            write_json(report_path, report)
+            write_json(schema_path, report["feature_sets"])
+            print(json.dumps({"features": str(args.output), "quality_report": str(report_path),
+                              "feature_sets": str(schema_path), "recordings": len(frame),
+                              "ready_features": str(ready_path), "ready_recordings": len(ready),
+                              "status_counts": report["status_counts"]}, indent=2))
+        elif args.command == "prepare-mdvr":
+            if args.output.suffix != ".csv":
+                raise ValueError("Manifest output must have the .csv extension.")
+            if args.metadata is not None and args.output.resolve() == args.metadata.resolve():
+                raise ValueError("Manifest output cannot overwrite the input speaker metadata.")
+            metadata = read_feature_csv(str(args.metadata)) if args.metadata is not None else None
+            manifest, speakers, audit = prepare_mdvr(args.root, metadata)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            manifest.to_csv(args.output, index=False)
+            template = args.output.with_suffix(".speakers.csv")
+            # Never overwrite demographics that a teammate has filled in.
+            if not template.exists():
+                speakers.to_csv(template, index=False)
+            audit_path = args.output.with_suffix(".audit.json")
+            write_json(audit_path, audit)
+            print(json.dumps({"manifest": str(args.output), "speaker_template": str(template),
+                              "audit": str(audit_path), "recordings": audit["recording_count"],
+                              "speakers": audit["speaker_count"],
+                              "speakers_missing_age": len(audit["missing_age_speaker_ids"])}, indent=2))
+        elif args.command == "train":
             if args.output.suffix != ".joblib":
                 raise ValueError("Training output must have the .joblib extension.")
             if args.output.resolve() == Path(args.csv).resolve():

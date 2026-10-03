@@ -209,6 +209,12 @@ def train(
     feature_names = validate_feature_names(feature_names)
     cohort = prepare_cohort(frame, feature_names, task)
     rows, features = cohort.rows, cohort.features
+    extractor_signature = None
+    if "extractor_signature" in rows:
+        signatures = rows["extractor_signature"].dropna().unique()
+        if rows["extractor_signature"].isna().any() or len(signatures) != 1:
+            raise ValueError("Training recordings must use one consistent extractor configuration.")
+        extractor_signature = str(signatures[0])
     if features.isna().all(axis=0).any():
         raise ValueError("Every selected feature needs a measurement in the training cohort.")
     groups = rows["speaker_id"]
@@ -246,6 +252,7 @@ def train(
         "schema_version": SCHEMA_VERSION, "model_name": model_name,
         "dataset_name": dataset_name, "task": task, "minimum_age": MIN_AGE,
         "feature_names": list(feature_names), "seed": seed,
+        "extractor_signature": extractor_signature,
         "threshold": 0.5, "sklearn_version": sklearn.__version__,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "training_speaker_ids": sorted(groups.unique().tolist()),
@@ -273,6 +280,10 @@ def evaluate_external(
         raise ValueError("External evaluation requires a distinct dataset name.")
     dataset_name = dataset_name.strip()
     cohort = prepare_cohort(frame, model.metadata["feature_names"], model.metadata["task"])
+    signature = model.metadata.get("extractor_signature")
+    if signature is not None and ("extractor_signature" not in cohort.rows or
+                                 not cohort.rows["extractor_signature"].eq(signature).all()):
+        raise ValueError("External features do not match the model's extractor configuration.")
     # Check all supplied speakers, even those excluded by task or age.
     speaker_ids = set(frame["speaker_id"].astype(str).str.strip())
     if speaker_ids.intersection(model.metadata["training_speaker_ids"]):

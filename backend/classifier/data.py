@@ -13,6 +13,10 @@ DEFAULT_FEATURES = (
 METADATA = frozenset({
     "speaker_id", "label", "age", "sex", "task", "file_path", "recording_id",
     "dataset", "diagnosis", "quality_passed",
+    "source_speaker_id", "sample_rate_hz", "channels", "sample_width_bits",
+    "duration_s",
+    "speaker_verified", "signal_quality_passed", "extraction_status",
+    "extractor_signature", "start_s", "end_s",
 })
 MIN_AGE = 50
 
@@ -98,6 +102,10 @@ def prepare_cohort(
         raise ValueError("No recordings match the task and age >= 50 cohort.")
     if rows["label"].nunique() != 2:
         raise ValueError("The eligible cohort must contain both control and PD speakers.")
+    if "quality_passed" in rows:
+        flags = rows["quality_passed"].astype(str).str.lower()
+        if not flags.isin(["true", "1"]).all():
+            raise ValueError("Eligible rows failed quality checks or need speaker review. Use only quality_passed=true rows.")
     features = numeric_features(rows, names)
     return Cohort(rows, features, exclusions)
 
