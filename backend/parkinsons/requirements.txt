@@ -1,0 +1,9 @@
+torch>=2.2
+numpy<2
+scipy
+scikit-learn
+librosa
+soundfile
+coremltools>=8.0
+onnx
+onnxruntime
