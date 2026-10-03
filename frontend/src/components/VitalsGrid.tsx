@@ -1,104 +1,58 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowRight,
-  AudioLines,
-  Brain,
-  Mic2,
-  Smile,
-} from "lucide-react";
+import { Activity, AudioLines, Check, TriangleAlert, Waves, Wind } from "lucide-react";
+import { Window } from "@/components/Window";
 import type { Metric } from "@/types/screening";
 
 type VitalsGridProps = {
   metrics: {
-    vocalEnergy: Metric;
-    vocalControl: Metric;
-    cognitivePacing: Metric;
-    expressionLevel: Metric;
+    jitter: Metric;
+    shimmer: Metric;
+    hnr: Metric;
+    mpp: Metric;
   };
 };
 
 const VITALS = [
-  {
-    key: "vocalEnergy" as const,
-    label: "Vocal Energy",
-    icon: AudioLines,
-  },
-  {
-    key: "vocalControl" as const,
-    label: "Vocal Control",
-    icon: Mic2,
-  },
-  {
-    key: "cognitivePacing" as const,
-    label: "Cognitive Pacing",
-    icon: Brain,
-  },
-  {
-    key: "expressionLevel" as const,
-    label: "Expression Level",
-    icon: Smile,
-  },
+  { key: "jitter" as const, label: "Jitter", icon: Activity, tile: "var(--pink)" },
+  { key: "shimmer" as const, label: "Shimmer", icon: Waves, tile: "var(--sky)" },
+  { key: "hnr" as const, label: "HNR", icon: Wind, tile: "var(--lilac)" },
+  { key: "mpp" as const, label: "MPP", icon: AudioLines, tile: "var(--pink)" },
 ];
-
-function deviationText(metric: Metric): string {
-  if (metric.deviation === 0) return "Matches normal";
-  const sign = metric.deviation > 0 ? "+" : "";
-  return `${sign}${metric.deviation}% from normal`;
-}
 
 export function VitalsGrid({ metrics }: VitalsGridProps) {
   return (
-    <section aria-labelledby="vitals-heading">
-      <h3
-        id="vitals-heading"
-        className="text-2xl font-bold text-white sm:text-3xl"
-      >
-        Today&apos;s Vitals
-      </h3>
-
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {VITALS.map(({ key, label, icon: Icon }) => {
+    <Window title="Today's Vitals" tone="sky" index={3} padded={false}>
+      <ul className="m-0 list-none p-0">
+        {VITALS.map(({ key, label, icon: Icon, tile }) => {
           const metric = metrics[key];
-          const isFlat = metric.deviation === 0;
-          const tone = metric.isWarning
-            ? "border-amber-400/50 bg-amber-400/10"
-            : "border-slate-600/70 bg-slate-900/70";
-          const statusTone = metric.isWarning
-            ? "text-amber-300"
-            : "text-emerald-300";
+          const StatusIcon = metric.isWarning ? TriangleAlert : Check;
 
           return (
-            <article
-              key={key}
-              className={`rounded-3xl border p-5 sm:p-6 ${tone}`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-800 text-amber-200">
-                  <Icon className="h-8 w-8" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xl font-semibold text-white sm:text-2xl">
-                    {label}
-                  </h4>
-                  <p className={`mt-2 text-2xl font-bold ${statusTone}`}>
-                    {metric.status}
-                  </p>
-                  <p className="mt-2 flex items-center gap-2 text-lg text-slate-300">
-                    {isFlat ? (
-                      <ArrowRight className="h-5 w-5" aria-hidden="true" />
-                    ) : (
-                      <ArrowDown className="h-5 w-5" aria-hidden="true" />
-                    )}
-                    <span>{deviationText(metric)}</span>
-                  </p>
-                </div>
+            <li key={key} className="vital">
+              <div className="vital-icon" style={{ background: tile }}>
+                <Icon className="h-7 w-7" strokeWidth={2.4} aria-hidden="true" />
               </div>
-            </article>
+              <div className="min-w-0 flex-1">
+                <h3 className="display h3 m-0">{label}</h3>
+                <p className="m-0 mt-1 text-[1.15rem] text-[var(--ink-soft)]">
+                  {metric.description}
+                </p>
+                <p
+                  className={`chip mt-2.5 ${metric.isWarning ? "chip-warn" : "chip-ok"}`}
+                >
+                  <StatusIcon
+                    className="h-[1.3em] w-[1.3em]"
+                    strokeWidth={2.5}
+                    aria-hidden="true"
+                  />
+                  {metric.status}
+                </p>
+              </div>
+            </li>
           );
         })}
-      </div>
-    </section>
+      </ul>
+    </Window>
   );
 }

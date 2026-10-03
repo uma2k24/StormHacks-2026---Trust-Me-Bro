@@ -5,26 +5,30 @@ export const mockResults: ScreeningResults = {
   readinessScore: 68,
   statusColor: "yellow",
   aiSummary:
-    "Your speech pacing is a bit slower than your usual baseline today. It might be a good idea to rest and hydrate.",
+    "Your pitch wobbles a little more than usual today, and your voice sounds a bit breathier. Rest and hydrate may help.",
   metrics: {
-    vocalEnergy: {
-      status: "Slightly Low",
-      deviation: -10,
-      isWarning: false,
+    jitter: {
+      status: "A bit higher",
+      description: "How much the pitch wobbles",
+      deviation: 12,
+      isWarning: true,
     },
-    vocalControl: {
+    shimmer: {
       status: "Steady",
+      description: "How much the volume shakes",
       deviation: 0,
       isWarning: false,
     },
-    cognitivePacing: {
-      status: "15% Slower",
-      deviation: -15,
+    hnr: {
+      status: "Slightly lower",
+      description: "How clear vs. breathy the voice is",
+      deviation: -10,
       isWarning: true,
     },
-    expressionLevel: {
-      status: "Normal",
-      deviation: -2,
+    mpp: {
+      status: "Mostly regular",
+      description: "How regular the vocal cords vibrate",
+      deviation: -4,
       isWarning: false,
     },
   },
@@ -60,8 +64,9 @@ export function statusColorForScore(score: number): StatusColor {
   return "red";
 }
 
+// Zone fills shared by the gauge, the trend chart bands and the status chips.
 export const statusHex: Record<StatusColor, string> = {
-  green: "#3DDC84",
-  yellow: "#F5C518",
-  red: "#FF6B6B",
+  green: "#6fdca3",
+  yellow: "#ffc72c",
+  red: "#ff8a78",
 };

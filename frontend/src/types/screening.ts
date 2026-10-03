@@ -4,6 +4,7 @@ export type StatusColor = "green" | "yellow" | "red";
 
 export type Metric = {
   status: string;
+  description: string;
   deviation: number;
   isWarning: boolean;
 };
@@ -19,10 +20,10 @@ export type ScreeningResults = {
   statusColor: StatusColor;
   aiSummary: string;
   metrics: {
-    vocalEnergy: Metric;
-    vocalControl: Metric;
-    cognitivePacing: Metric;
-    expressionLevel: Metric;
+    jitter: Metric;
+    shimmer: Metric;
+    hnr: Metric;
+    mpp: Metric;
   };
   trendData: TrendPoint[];
   yesterdayScore: number;

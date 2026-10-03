@@ -1,9 +1,9 @@
 "use client";
 
-import {
-  readinessLabel,
-  statusHex,
-} from "@/data/mockResults";
+import { useEffect, useState, type CSSProperties } from "react";
+import { StatusChip } from "@/components/StatusChip";
+import { Window } from "@/components/Window";
+import { readinessLabel } from "@/data/mockResults";
 import type { StatusColor } from "@/types/screening";
 
 type ReadinessDialProps = {
@@ -11,58 +11,149 @@ type ReadinessDialProps = {
   statusColor: StatusColor;
 };
 
+const CX = 150;
+const CY = 150;
+const R_OUT = 132;
+const R_IN = 98;
+const NEEDLE_LEN = 124;
+
+/** Zones match the labels: Rest < 60 <= Pay Attention < 80 <= Ready. */
+const ZONES = [
+  { from: 0, to: 60, fill: "var(--zone-rest)" },
+  { from: 60, to: 80, fill: "var(--zone-attention)" },
+  { from: 80, to: 100, fill: "var(--zone-ready)" },
+] as const;
+
+/** A point on the gauge: 0 is the far left, 100 the far right, sweeping over the top. */
+function polar(radius: number, value: number): [number, number] {
+  const angle = (value / 100) * Math.PI;
+  return [CX - radius * Math.cos(angle), CY - radius * Math.sin(angle)];
+}
+
+function sector(from: number, to: number): string {
+  const [x0o, y0o] = polar(R_OUT, from);
+  const [x1o, y1o] = polar(R_OUT, to);
+  const [x1i, y1i] = polar(R_IN, to);
+  const [x0i, y0i] = polar(R_IN, from);
+  return `M${x0o} ${y0o} A${R_OUT} ${R_OUT} 0 0 1 ${x1o} ${y1o} L${x1i} ${y1i} A${R_IN} ${R_IN} 0 0 0 ${x0i} ${y0i}Z`;
+}
+
+/** Counts up from 0 in step with the needle's swing. Jumps straight there if motion is reduced. */
+function useCountUp(target: number, durationMs = 1500, delayMs = 350) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const delay = reduceMotion ? 0 : delayMs;
+    const duration = reduceMotion ? 0 : durationMs;
+
+    let frame = 0;
+    let start = 0;
+    const timer = window.setTimeout(() => {
+      const step = (now: number) => {
+        start ||= now;
+        const t = duration === 0 ? 1 : Math.min((now - start) / duration, 1);
+        setValue(Math.round(target * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) frame = requestAnimationFrame(step);
+      };
+      frame = requestAnimationFrame(step);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [target, durationMs, delayMs]);
+
+  return value;
+}
+
 export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
-  const size = 280;
-  const stroke = 22;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(Math.max(score, 0), 100) / 100;
-  const offset = circumference * (1 - progress);
-  const color = statusHex[statusColor];
-  const label = readinessLabel(score);
+  const clamped = Math.min(Math.max(score, 0), 100);
+  const label = readinessLabel(clamped);
+  const shown = useCountUp(clamped);
 
   return (
-    <div className="flex flex-col items-center text-center">
+    <Window title="Today's Readiness" tone="lilac" index={1}>
       <div
-        className="relative"
-        style={{ width: size, height: size }}
+        className="flex flex-col items-center text-center"
         role="img"
-        aria-label={`Today's readiness score ${score} out of 100. ${label}.`}
+        aria-label={`Today's readiness score ${clamped} out of 100. ${label}.`}
       >
-        <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#243041"
-            strokeWidth={stroke}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-          />
+        <svg
+          className="gauge"
+          viewBox="0 0 300 196"
+          aria-hidden="true"
+          focusable="false"
+        >
+          {ZONES.map((zone) => (
+            <path
+              key={zone.from}
+              d={sector(zone.from, zone.to)}
+              fill={zone.fill}
+              stroke="#1B1347"
+              strokeWidth="3.5"
+              strokeLinejoin="round"
+            />
+          ))}
+
+          {/* tick marks every 10 */}
+          {Array.from({ length: 11 }).map((_, index) => {
+            const [x0, y0] = polar(R_OUT + 8, index * 10);
+            const [x1, y1] = polar(R_OUT + 17, index * 10);
+            return (
+              <line
+                key={index}
+                x1={x0}
+                y1={y0}
+                x2={x1}
+                y2={y1}
+                stroke="#1B1347"
+                strokeWidth={index % 5 === 0 ? 4 : 2.5}
+                strokeLinecap="round"
+              />
+            );
+          })}
+
+          <text x="34" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="#1B1347">
+            0
+          </text>
+          <text x="266" y="190" textAnchor="middle" fontSize="22" fontFamily="var(--ff-head)" fontWeight="800" fill="#1B1347">
+            100
+          </text>
+
+          <g className="needle" style={{ "--score": clamped } as CSSProperties}>
+            <g className="needle-hum">
+              <polygon
+                points={`${CX - NEEDLE_LEN},${CY} ${CX},${CY - 9} ${CX},${CY + 9}`}
+                fill="#1B1347"
+                stroke="#1B1347"
+                strokeWidth="4"
+                strokeLinejoin="round"
+              />
+            </g>
+          </g>
+
+          {/* hub sits above the needle */}
+          <circle cx={CX} cy={CY} r="19" fill="#1B1347" />
+          <circle cx={CX} cy={CY} r="7" fill="#FFC72C" />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
-          <span className="text-7xl font-bold tabular-nums leading-none text-white sm:text-8xl">
-            {score}
-          </span>
-          <span className="mt-2 text-xl font-medium text-slate-300">
-            out of 100
-          </span>
-        </div>
+
+        <p className="display mt-1 text-[5.5rem] leading-none tabular-nums" aria-hidden="true">
+          {shown}
+        </p>
+        <p className="display mt-2 text-[1.5rem] text-[var(--ink-soft)]" aria-hidden="true">
+          out of 100
+        </p>
+
+        <StatusChip
+          status={statusColor}
+          label={label}
+          className="mt-4 !px-4 !py-2 !text-[1.5rem]"
+        />
       </div>
-      <h2 className="mt-6 max-w-md text-3xl font-bold leading-tight text-white sm:text-4xl">
-        Today&apos;s Readiness:{" "}
-        <span style={{ color }}>{label}</span>
-      </h2>
-    </div>
+    </Window>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { Waveform } from "@/components/Waveform";
+import { Window } from "@/components/Window";
 
 const MESSAGES = [
   "Hearing you back…",
@@ -9,60 +10,71 @@ const MESSAGES = [
   "Almost there…",
 ] as const;
 
+const BLOCKS = 16;
+const TOTAL_MS = 4800;
+const TICK_MS = TOTAL_MS / BLOCKS;
+
 type ProcessingScreenProps = {
   onComplete: () => void;
 };
 
 export function ProcessingScreen({ onComplete }: ProcessingScreenProps) {
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [filled, setFilled] = useState(0);
 
   useEffect(() => {
-    const messageTimer = window.setInterval(() => {
-      setMessageIndex((current) => (current + 1) % MESSAGES.length);
-    }, 1600);
+    const tick = window.setInterval(() => {
+      setFilled((current) => Math.min(current + 1, BLOCKS));
+    }, TICK_MS);
 
-    const finishTimer = window.setTimeout(onComplete, 4800);
+    const finishTimer = window.setTimeout(onComplete, TOTAL_MS + 300);
 
     return () => {
-      window.clearInterval(messageTimer);
+      window.clearInterval(tick);
       window.clearTimeout(finishTimer);
     };
   }, [onComplete]);
 
+  const messageIndex = Math.min(
+    Math.floor((filled / BLOCKS) * MESSAGES.length),
+    MESSAGES.length - 1,
+  );
+  const percent = Math.round((filled / BLOCKS) * 100);
+
   return (
-    <section className="flex min-h-full flex-1 flex-col items-center justify-center gap-10 px-6 py-10 sm:px-10">
-      <div className="relative flex h-40 w-40 items-center justify-center">
-        <motion.span
-          className="absolute inset-0 rounded-full bg-amber-400/20"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.15, 0.5] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-          aria-hidden="true"
-        />
-        <motion.span
-          className="absolute inset-6 rounded-full bg-slate-700/80"
-          animate={{ opacity: [0.55, 0.95, 0.55] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-          aria-hidden="true"
-        />
-        <div className="relative h-16 w-16 rounded-full bg-slate-600/90" aria-hidden="true" />
-      </div>
+    <section className="flex flex-1 flex-col justify-center py-4">
+      <Window title="Working…" tone="sky" className="w-full">
+        <div className="flex flex-col items-center gap-6 py-3 text-center">
+          <div
+            className="grid h-24 w-24 place-items-center rounded-full border-[3px] border-[var(--ink)] bg-[var(--yellow)] text-[var(--ink)] shadow-[4px_4px_0_var(--ink)]"
+            aria-hidden="true"
+          >
+            <Waveform bars={7} />
+          </div>
 
-      <div className="w-full max-w-xl space-y-5" aria-live="polite">
-        <motion.p
-          key={MESSAGES[messageIndex]}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center text-3xl font-semibold leading-snug text-white sm:text-4xl"
-        >
-          {MESSAGES[messageIndex]}
-        </motion.p>
+          <div className="space-y-2" aria-live="polite">
+            <p
+              key={MESSAGES[messageIndex]}
+              className="display h2 pop-in"
+            >
+              {MESSAGES[messageIndex]}
+            </p>
+            <p className="lede">Please wait a moment.</p>
+          </div>
 
-        <div className="space-y-3" aria-hidden="true">
-          <div className="h-5 w-full animate-pulse rounded-full bg-slate-700/80" />
-          <div className="h-5 w-5/6 animate-pulse rounded-full bg-slate-700/60 mx-auto" />
-          <div className="h-5 w-2/3 animate-pulse rounded-full bg-slate-700/50 mx-auto" />
+          <div
+            className="blocks w-full"
+            role="progressbar"
+            aria-label="Checking your voice"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            {Array.from({ length: BLOCKS }).map((_, index) => (
+              <span key={index} data-on={index < filled} />
+            ))}
+          </div>
         </div>
-      </div>
+      </Window>
     </section>
   );
 }

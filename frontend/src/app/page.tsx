@@ -1,15 +1,30 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { MotionConfig } from "framer-motion";
 import { ActiveScreen } from "@/components/ActiveScreen";
+import { AppBar } from "@/components/AppBar";
+import { Confetti } from "@/components/Confetti";
 import { IdleScreen } from "@/components/IdleScreen";
 import { ProcessingScreen } from "@/components/ProcessingScreen";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { mockResults } from "@/data/mockResults";
 import type { AppScreen } from "@/types/screening";
 
+function screenFromQuery(): AppScreen {
+  const value = new URLSearchParams(window.location.search).get("screen");
+  if (value === "recording" || value === "chat") return "recording";
+  if (value === "processing") return "processing";
+  if (value === "results") return "results";
+  return "idle";
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<AppScreen>("idle");
+
+  useEffect(() => {
+    setScreen(screenFromQuery());
+  }, []);
 
   const startCheckIn = useCallback(() => setScreen("recording"), []);
   const finishRecording = useCallback(() => setScreen("processing"), []);
@@ -17,27 +32,35 @@ export default function Home() {
   const restart = useCallback(() => setScreen("idle"), []);
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-5xl flex-1 flex-col">
-      {screen === "idle" ? (
-        <IdleScreen
-          userName={mockResults.user}
-          yesterdayScore={mockResults.yesterdayScore}
-          yesterdayLabel={mockResults.yesterdayLabel}
-          onStart={startCheckIn}
-        />
-      ) : null}
+    // reducedMotion="user" makes framer-motion honour the OS "reduce motion" setting.
+    <MotionConfig reducedMotion="user">
+      <Confetti />
+      <div className="app-shell flex flex-col" data-screen={screen}>
+        <AppBar />
 
-      {screen === "recording" ? (
-        <ActiveScreen onComplete={finishRecording} />
-      ) : null}
+        <main className="shell app-main">
+          {screen === "idle" ? (
+            <IdleScreen
+              userName={mockResults.user}
+              yesterdayScore={mockResults.yesterdayScore}
+              yesterdayLabel={mockResults.yesterdayLabel}
+              onStart={startCheckIn}
+            />
+          ) : null}
 
-      {screen === "processing" ? (
-        <ProcessingScreen onComplete={showResults} />
-      ) : null}
+          {screen === "recording" ? (
+            <ActiveScreen onComplete={finishRecording} />
+          ) : null}
 
-      {screen === "results" ? (
-        <ResultsDashboard results={mockResults} onRestart={restart} />
-      ) : null}
-    </main>
+          {screen === "processing" ? (
+            <ProcessingScreen onComplete={showResults} />
+          ) : null}
+
+          {screen === "results" ? (
+            <ResultsDashboard results={mockResults} onRestart={restart} />
+          ) : null}
+        </main>
+      </div>
+    </MotionConfig>
   );
 }

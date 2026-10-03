@@ -1,11 +1,20 @@
-import type { Metadata } from "next";
-import { Lexend } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Atkinson_Hyperlegible, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
-const lexend = Lexend({
-  variable: "--font-lexend",
+// Atkinson Hyperlegible was designed by the Braille Institute for low-vision
+// readers, so every glyph is built to be told apart at a glance.
+const body = Atkinson_Hyperlegible({
+  variable: "--ff-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
+});
+
+// A heavy, slightly quirky grotesque that gives the headlines a 90s poster feel.
+const display = Bricolage_Grotesque({
+  variable: "--ff-display",
+  subsets: ["latin"],
+  axes: ["opsz", "wdth"],
 });
 
 export const metadata: Metadata = {
@@ -14,10 +23,19 @@ export const metadata: Metadata = {
     "A daily voice check-in that shows your readiness in plain language.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#FFF6E0",
+  colorScheme: "light",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${lexend.variable} h-full antialiased`}>
-      <body className="min-h-full font-sans">{children}</body>
+    <html
+      lang="en"
+      data-text-size="standard"
+      className={`${body.variable} ${display.variable}`}
+    >
+      <body>{children}</body>
     </html>
   );
 }

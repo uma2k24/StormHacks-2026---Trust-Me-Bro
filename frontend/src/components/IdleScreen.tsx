@@ -1,7 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Mic } from "lucide-react";
+import { StatusChip } from "@/components/StatusChip";
+import { Window } from "@/components/Window";
+import { statusColorForScore } from "@/data/mockResults";
 
 type IdleScreenProps = {
   userName: string;
@@ -10,6 +12,8 @@ type IdleScreenProps = {
   onStart: () => void;
 };
 
+const RING_TEXT = "TAP TO TALK • TAP TO TALK • TAP TO TALK • ";
+
 export function IdleScreen({
   userName,
   yesterdayScore,
@@ -17,55 +21,66 @@ export function IdleScreen({
   onStart,
 }: IdleScreenProps) {
   return (
-    <section className="flex min-h-full flex-1 flex-col items-center justify-between px-6 py-10 sm:px-10">
-      <header className="w-full max-w-xl text-center">
-        <p className="text-lg font-medium tracking-wide text-amber-200/90">
-          Daily Voice Check-in
-        </p>
-        <h1 className="mt-3 text-4xl font-bold leading-tight text-white sm:text-5xl">
-          Good Morning, {userName}.
+    <section className="flex flex-1 flex-col items-center justify-between gap-12 pt-2 text-center">
+      <header className="w-full">
+        <h1 className="display h1">
+          Good Morning, <span className="marker">{userName}</span>.
         </h1>
-      </header>
-
-      <div className="flex w-full max-w-xl flex-col items-center gap-8">
-        <div className="relative flex items-center justify-center">
-          <motion.span
-            className="absolute h-56 w-56 rounded-full bg-amber-400/20 sm:h-64 sm:w-64"
-            animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0.2, 0.45] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-            aria-hidden="true"
-          />
-          <motion.span
-            className="absolute h-44 w-44 rounded-full bg-amber-300/25 sm:h-52 sm:w-52"
-            animate={{ scale: [1, 1.08, 1], opacity: [0.55, 0.25, 0.55] }}
-            transition={{
-              duration: 2.4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0.35,
-            }}
-            aria-hidden="true"
-          />
-          <button
-            type="button"
-            onClick={onStart}
-            className="relative z-10 flex h-40 w-40 items-center justify-center rounded-full bg-amber-300 text-slate-950 shadow-[0_0_40px_rgba(245,197,24,0.45)] transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:scale-[0.98] sm:h-48 sm:w-48"
-            aria-label="Tap to start a conversational check-in"
-          >
-            <Mic className="h-20 w-20 stroke-[2.25] sm:h-24 sm:w-24" aria-hidden="true" />
-          </button>
-        </div>
-
-        <p className="max-w-md text-center text-2xl font-medium leading-snug text-slate-100 sm:text-3xl">
+        <p className="lede mx-auto mt-4 max-w-[22rem]">
           Want to check in? Just tap and we&apos;ll talk.
         </p>
+      </header>
+
+      <div className="sonar rounded-full">
+        <svg
+          className="badge-ring"
+          viewBox="0 0 300 300"
+          aria-hidden="true"
+        >
+          <defs>
+            <path
+              id="badge-ring-path"
+              d="M150,150 m-128,0 a128,128 0 1,1 256,0 a128,128 0 1,1 -256,0"
+            />
+          </defs>
+          <text
+            fill="#4A4270"
+            fontFamily="var(--ff-ui)"
+            fontWeight="700"
+            fontSize="21"
+          >
+            <textPath
+              href="#badge-ring-path"
+              textLength="796"
+              lengthAdjust="spacing"
+            >
+              {RING_TEXT}
+            </textPath>
+          </text>
+        </svg>
+
+        <button
+          type="button"
+          onClick={onStart}
+          className="orb orb-xl"
+          aria-label="Tap to start a conversational check-in"
+        >
+          <Mic className="h-[4.25rem] w-[4.25rem]" strokeWidth={2.5} aria-hidden="true" />
+          <span className="display text-[2.1rem]">Start</span>
+        </button>
       </div>
 
-      <div className="w-full max-w-xl">
-        <p className="mx-auto w-fit rounded-full border border-emerald-400/40 bg-emerald-500/15 px-6 py-3 text-xl font-semibold text-emerald-300">
-          Yesterday: {yesterdayScore} — {yesterdayLabel}
+      <Window title="Yesterday" tone="pink" index={1} className="w-full text-left">
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="display text-[3.4rem] leading-none tabular-nums">
+            {yesterdayScore}
+          </span>
+          <StatusChip
+            status={statusColorForScore(yesterdayScore)}
+            label={yesterdayLabel}
+          />
         </p>
-      </div>
+      </Window>
     </section>
   );
 }

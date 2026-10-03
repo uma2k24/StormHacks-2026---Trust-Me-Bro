@@ -1,78 +1,121 @@
 "use client";
 
 import {
-  Area,
-  AreaChart,
+  Line,
+  LineChart,
+  ReferenceArea,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { Window } from "@/components/Window";
 import type { TrendPoint } from "@/types/screening";
 
 type TrendChartProps = {
   data: TrendPoint[];
 };
 
+const INK = "#1B1347";
+
+type DotProps = { cx?: number; cy?: number; index?: number };
+
 export function TrendChart({ data }: TrendChartProps) {
+  const last = data.length - 1;
+  const first = data[0];
+  const today = data[last];
+
+  const renderDot = ({ cx, cy, index }: DotProps) => {
+    if (cx === undefined || cy === undefined) return <g key={index} />;
+    const isToday = index === last;
+    return (
+      <g key={index}>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={isToday ? 10 : 5}
+          fill={isToday ? "#FF8A78" : "#FFC72C"}
+          stroke={INK}
+          strokeWidth={isToday ? 3.5 : 2.5}
+        />
+        {isToday ? (
+          // callout pill so the number never fights the line
+          <g>
+            <rect
+              x={cx - 24}
+              y={cy + 22}
+              width={48}
+              height={32}
+              rx={16}
+              fill="#FFFFFF"
+              stroke={INK}
+              strokeWidth={2.5}
+            />
+            <text
+              x={cx}
+              y={cy + 45}
+              textAnchor="middle"
+              fontSize="1.3rem"
+              fontFamily="var(--ff-head)"
+              fontWeight={800}
+              fill={INK}
+            >
+              {today.score}
+            </text>
+          </g>
+        ) : null}
+      </g>
+    );
+  };
+
   return (
-    <section aria-labelledby="trend-heading">
-      <h3
-        id="trend-heading"
-        className="text-2xl font-bold text-white sm:text-3xl"
-      >
-        Readiness Over 14 Days
-      </h3>
-      <p className="mt-2 text-lg text-slate-300">
+    <Window title="Readiness Over 14 Days" tone="lilac" index={4}>
+      <p className="m-0 text-[1.15rem] text-[var(--ink-soft)]">
         A simple look at how your score has been trending.
       </p>
 
-      <div className="mt-6 h-64 w-full rounded-3xl border border-slate-600/70 bg-slate-900/70 p-4 sm:h-72 sm:p-6">
+      <div
+        className="mt-4 h-60 w-full"
+        role="img"
+        aria-label={`Line chart of your readiness over 14 days. It started at ${first.score} and today is ${today.score}.`}
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="readinessFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F5C518" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#F5C518" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
+          <LineChart data={data} margin={{ top: 22, right: 34, left: 0, bottom: 4 }}>
+            {/* the same three zones as the gauge, kept very light */}
+            <ReferenceArea y1={50} y2={60} fill="#FF8A78" fillOpacity={0.3} />
+            <ReferenceArea y1={60} y2={80} fill="#FFC72C" fillOpacity={0.3} />
+            <ReferenceArea y1={80} y2={100} fill="#6FDCA3" fillOpacity={0.3} />
             <XAxis
               dataKey="day"
+              ticks={[first.day, "7", "Thu", today.day]}
               tickLine={false}
-              axisLine={false}
-              tick={{ fill: "#94A3B8", fontSize: 14 }}
-              interval="preserveStartEnd"
+              axisLine={{ stroke: INK, strokeWidth: 2.5 }}
+              tick={{ fill: INK, fontSize: "1.05rem", fontWeight: 800, fontFamily: "var(--ff-head)" }}
+              tickMargin={8}
             />
             <YAxis
               domain={[50, 100]}
+              ticks={[60, 80, 100]}
               tickLine={false}
-              axisLine={false}
-              tick={{ fill: "#94A3B8", fontSize: 14 }}
-              width={40}
+              axisLine={{ stroke: INK, strokeWidth: 2.5 }}
+              tick={{ fill: INK, fontSize: "1.05rem", fontWeight: 800, fontFamily: "var(--ff-head)" }}
+              width={44}
             />
-            <Tooltip
-              contentStyle={{
-                background: "#0F172A",
-                border: "1px solid #475569",
-                borderRadius: 16,
-                fontSize: 16,
-                color: "#F8FAFC",
-              }}
-              labelStyle={{ color: "#F5C518", fontWeight: 700 }}
-              formatter={(value) => [`${value}`, "Readiness"]}
-            />
-            <Area
+            <Line
               type="monotone"
               dataKey="score"
-              stroke="#F5C518"
+              stroke={INK}
               strokeWidth={4}
-              fill="url(#readinessFill)"
-              dot={false}
-              activeDot={{ r: 7, fill: "#FFE566", stroke: "#0F172A", strokeWidth: 3 }}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              dot={renderDot}
+              activeDot={false}
+              isAnimationActive
+              animationDuration={1400}
+              animationEasing="ease-out"
             />
-          </AreaChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </Window>
   );
 }

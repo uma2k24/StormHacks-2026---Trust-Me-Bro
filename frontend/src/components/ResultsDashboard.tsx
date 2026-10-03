@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sparkles } from "lucide-react";
 import { AiSummaryCard } from "@/components/AiSummaryCard";
 import { ReadinessDial } from "@/components/ReadinessDial";
 import { TrendChart } from "@/components/TrendChart";
@@ -17,13 +17,15 @@ export function ResultsDashboard({
   onRestart,
 }: ResultsDashboardProps) {
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-10 sm:px-8">
-      <header className="text-center">
-        <p className="text-lg font-medium text-amber-200/90">
+    <section className="flex flex-col gap-7">
+      <header className="pop-in text-center">
+        <p className="eyebrow text-[var(--cobalt)]">
+          <Sparkles className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
           Nice talking with you
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-          Thanks, {results.user} — here&apos;s how you&apos;re looking today.
+        <h1 className="display h2 mt-2">
+          Thanks, <span className="marker">{results.user}</span> — here&apos;s how you&apos;re
+          looking today.
         </h1>
       </header>
 
@@ -41,9 +43,10 @@ export function ResultsDashboard({
       <button
         type="button"
         onClick={onRestart}
-        className="flex h-20 w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-400 bg-slate-800 text-2xl font-bold text-white transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-amber-300"
+        className="btn btn-block btn-yellow pop-in"
+        style={{ "--i": 5 } as React.CSSProperties}
       >
-        <RotateCcw className="h-7 w-7" aria-hidden="true" />
+        <RotateCcw className="h-6 w-6" strokeWidth={2.75} aria-hidden="true" />
         Start New Check-in
       </button>
     </section>
