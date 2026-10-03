@@ -23,6 +23,9 @@ def main(argv: list[str] | None = None) -> int:
     extraction.add_argument("--manifest", type=Path, required=True)
     extraction.add_argument("--audio-root", type=Path, default=Path("."), help="Base for manifest file_path values; default is current directory.")
     extraction.add_argument("--output", type=Path, required=True, help="Feature CSV destination.")
+    extraction.add_argument("--embeddings", nargs="+", choices=("whisper", "hubert", "wavlm"), default=[],
+                            help="Optional frozen encoder features; downloads pinned weights on first use.")
+    extraction.add_argument("--local-models-only", action="store_true", help="Require already cached encoder weights.")
     preparation = commands.add_parser("prepare-mdvr", help="Build an MDVR-KCL manifest and header audit; unknown ages stay blank.")
     preparation.add_argument("--root", type=Path, required=True, help="Directory containing ReadText and SpontaneousDialogue.")
     preparation.add_argument("--metadata", type=Path, help="Verified speaker_id/age/sex CSV, one row per person.")
@@ -33,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     training.add_argument("--task", required=True, help="Exact task string in the CSV.")
     training.add_argument("--model", choices=MODEL_NAMES, default="logistic_regression")
     training.add_argument("--features", nargs="+", default=list(DEFAULT_FEATURES), help="Explicit numeric feature columns.")
+    training.add_argument("--feature-set", help="Named set in the CSV's sibling .features.json; overrides --features.")
+    training.add_argument("--feature-schema", type=Path, help="Explicit feature-set JSON; otherwise inferred from the CSV name.")
     training.add_argument("--cv", choices=("groupkfold", "loso"), default="groupkfold")
     training.add_argument("--folds", type=int, default=5)
     training.add_argument("--seed", type=int, default=42)
@@ -49,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "extract":
             from backend.audio.batch import extract_manifest
+            from backend.audio import AudioExtractor
 
             if args.output.suffix != ".csv" or args.output.resolve() == args.manifest.resolve():
                 raise ValueError("Feature output must be a .csv distinct from the input manifest.")
@@ -62,7 +68,9 @@ def main(argv: list[str] | None = None) -> int:
             def progress(count, total, status):
                 print(f"Extracted {count}/{total}: {status}", file=sys.stderr, flush=True)
 
-            frame, report = extract_manifest(read_feature_csv(str(args.manifest)), audio_root=args.audio_root, progress=progress)
+            extractor = AudioExtractor(embedding_models=args.embeddings, local_files_only=args.local_models_only)
+            frame, report = extract_manifest(read_feature_csv(str(args.manifest)), audio_root=args.audio_root,
+                                             extractor=extractor, progress=progress)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             frame.to_csv(args.output, index=False)
             ages = pd.to_numeric(frame["age"], errors="coerce")
@@ -99,9 +107,19 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Training output must have the .joblib extension.")
             if args.output.resolve() == Path(args.csv).resolve():
                 raise ValueError("Training output cannot overwrite its input dataset.")
+            features = args.features
+            if args.feature_set:
+                csv_path = Path(args.csv)
+                schema_path = args.feature_schema or csv_path.with_suffix(".features.json")
+                if args.feature_schema is None and csv_path.stem.endswith(".ready"):
+                    schema_path = csv_path.with_name(csv_path.stem.removesuffix(".ready") + ".features.json")
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                if not isinstance(schema, dict) or args.feature_set not in schema:
+                    raise ValueError("Requested feature set is not in the CSV's .features.json schema.")
+                features = schema[args.feature_set]
             model, report = train(
                 read_feature_csv(args.csv), task=args.task, dataset_name=args.dataset,
-                model_name=args.model, feature_names=args.features,
+                model_name=args.model, feature_names=features,
                 cv=args.cv, n_splits=args.folds, seed=args.seed,
             )
             model.save(args.output)

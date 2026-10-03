@@ -184,6 +184,10 @@ class VoiceClassifier:
         if metadata["model_name"] not in MODEL_NAMES or metadata["minimum_age"] != MIN_AGE or metadata["threshold"] != 0.5:
             raise ValueError("Classifier artifact has unsupported model settings.")
         names = validate_feature_names(metadata["feature_names"])
+        if "embedding_models" in metadata:
+            from backend.audio.embeddings import validate_models
+
+            validate_models(metadata["embedding_models"])
         pipeline = payload["pipeline"]
         if set(pipeline.named_steps) != {"imputer", "scaler", "classifier"}:
             raise ValueError("Classifier artifact has an unexpected pipeline.")
@@ -210,6 +214,17 @@ def train(
     cohort = prepare_cohort(frame, feature_names, task)
     rows, features = cohort.rows, cohort.features
     extractor_signature = None
+    embedding_models = ()
+    if "embedding_models" in rows:
+        from backend.audio.embeddings import validate_models
+
+        profiles = rows["embedding_models"].fillna("").unique()
+        if len(profiles) != 1:
+            raise ValueError("Training recordings must use one embedding profile.")
+        embedding_models = validate_models(profiles[0].split(",") if profiles[0] else ())
+    selected_embeddings = {name.split("_")[1] for name in feature_names if name.startswith("embedding_")}
+    if selected_embeddings - set(embedding_models):
+        raise ValueError("Selected embedding features require their extraction profile in embedding_models.")
     if "extractor_signature" in rows:
         signatures = rows["extractor_signature"].dropna().unique()
         if rows["extractor_signature"].isna().any() or len(signatures) != 1:
@@ -253,6 +268,7 @@ def train(
         "dataset_name": dataset_name, "task": task, "minimum_age": MIN_AGE,
         "feature_names": list(feature_names), "seed": seed,
         "extractor_signature": extractor_signature,
+        "embedding_models": list(embedding_models),
         "threshold": 0.5, "sklearn_version": sklearn.__version__,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "training_speaker_ids": sorted(groups.unique().tolist()),

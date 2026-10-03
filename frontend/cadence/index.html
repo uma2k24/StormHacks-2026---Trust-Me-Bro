@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-api-prefix="/api">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6c5ce7">
+  <title>CADENCE · Voice research</title>
+  <link rel="icon" href="/static/cadence/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/cadence/upstream.css">
+  <link rel="stylesheet" href="/static/cadence/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar"><a class="brand" href="/">CADENCE<span class="brand-dot" aria-hidden="true"></span></a><span class="tag">RESEARCH PROTOTYPE</span></header>
+    <section class="intro">
+      <div class="hero-copy"><p class="eyebrow">VOICE RESEARCH</p>
+      <h1>Your voice.<br><span>A closer listen.</span></h1>
+      <p class="lede">Record your voice to explore pitch, stability and clarity. A trained research model can compare its patterns with the study cohort.</p>
+      <p class="notice">This tool cannot confirm or rule out Parkinson’s disease. Model coverage begins at age 50.</p></div>
+      <div class="hero-mascot">    <div class="mascot" id="mascot">
+      <svg viewBox="0 0 220 200" width="176" height="160" aria-label="Cadi">
+        <ellipse class="shadow" cx="110" cy="182" rx="58" ry="9"></ellipse>
+        <g id="mascotBody">
+          <path class="body" d="M110 26c46 0 78 32 78 74 0 40-30 70-78 70S32 140 32 100c0-42 32-74 78-74z"></path>
+          <ellipse class="cheek" cx="74" cy="112" rx="11" ry="7"></ellipse>
+          <ellipse class="cheek" cx="146" cy="112" rx="11" ry="7"></ellipse>
+          <g class="eyes"><circle class="eye" cx="87" cy="93" r="8.5"></circle><circle class="eye" cx="133" cy="93" r="8.5"></circle>
+            <circle class="spark" cx="90" cy="90" r="2.6"></circle><circle class="spark" cx="136" cy="90" r="2.6"></circle></g>
+          <path class="mouth" d="M99 117 q11 11 22 0"></path>
+          <path class="wave w-l" d="M27 93 q-9 7 0 15"></path><path class="wave w-r" d="M193 93 q9 7 0 15"></path>
+        </g>
+      </svg>
+    </div>
+      </div>
+    </section>
+    <div id="service-status" class="service-status" role="status">Connecting to the analysis service…</div>
+    <div class="workspace">
+      <section class="card recording-card" aria-labelledby="recording-heading">
+        <div class="section-heading"><span class="step">01</span><div><p class="eyebrow">START HERE</p><h2 id="recording-heading">Prepare your recording</h2></div></div>
+        <form id="analysis-form">
+          <div class="form-row">
+            <label>Age in years<input id="age" name="age" type="number" min="0" max="120" step="1" required inputmode="numeric" placeholder="e.g. 62"></label>
+            <label>Recording task<select id="task" name="task"><option value="reading">Reading aloud</option><option value="sustained_a">Sustained “ah”</option><option value="spontaneous">Spontaneous speech</option></select></label>
+          </div>
+          <div class="instructions"><span class="small-label">RECORDING GUIDE</span><p id="task-guide">Read your study’s reference passage aloud at a comfortable pace.</p><p class="hint">Choose a quiet space. Keep the microphone at a consistent distance. Only the participant should speak.</p></div>
+          <div class="recorder">
+            <div class="recorder-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <p id="recording-state">Ready when you are</p><p id="timer" class="timer">00:00</p>
+            <div class="recorder-buttons"><button type="button" id="record" class="secondary"><span aria-hidden="true">●</span> Record voice</button><button type="button" id="stop" class="secondary" disabled>Stop recording</button></div>
+            <p class="hint">Microphone recordings stop at 60 seconds.</p>
+          </div>
+          <div class="upload"><label for="audio-file">Or upload a WAV file<span>Mono or stereo · 16–96 kHz · up to 32 MiB / 5 minutes</span></label><input id="audio-file" type="file" accept=".wav,audio/wav,audio/x-wav"></div>
+          <p id="chosen-file" class="chosen-file">No recording selected.</p>
+          <audio id="preview" controls hidden aria-label="Recording preview"></audio>
+          <label class="checkbox"><input id="speaker-verified" type="checkbox"><span>I confirm this audio contains only the participant’s voice.</span></label>
+          <label class="checkbox"><input id="use-gemini" type="checkbox" disabled><span>Use Gemini to select measurement explanations.<small>When enabled, measured acoustic values and the task are sent to Google. Audio and age stay on this server.</small></span></label>
+          <p id="gemini-status" class="hint">Local explanations are always available.</p>
+          <button id="analyze" type="submit" class="primary" disabled>Analyze recording <span aria-hidden="true">↗</span></button>
+          <p id="form-error" class="error" role="alert" hidden></p>
+        </form>
+      </section>
+      <section class="card results-card" aria-labelledby="results-heading" aria-live="polite">
+        <div class="section-heading"><span class="step">02</span><div><p class="eyebrow">UNDERSTAND THE RECORDING</p><h2 id="results-heading">Your analysis</h2></div></div>
+        <div id="empty-result" class="empty-result"><div class="empty-orbit" aria-hidden="true">↗</div><h3>A little clarity starts here.</h3><p>Your quality checks and measurement explanations will appear after analysis.</p></div>
+        <div id="result" hidden>
+          <span id="result-status" class="result-status"></span>
+          <p id="summary" class="summary"></p>
+          <div id="score-panel" class="score-panel" hidden><span class="small-label">MODEL SCORE · UNCALIBRATED</span><strong id="score"></strong><span id="classification"></span></div>
+          <section id="quality-panel" class="quality-panel" hidden><h3>Recording quality</h3><dl id="quality-metrics"></dl><ul id="quality-issues"></ul></section>
+          <section id="observations-panel" hidden><h3>Measured in your voice</h3><div id="observations"></div></section>
+          <p id="provider-note" class="hint"></p>
+          <p id="result-disclaimer" class="result-disclaimer"></p>
+          <details><summary>View measurements and analysis data</summary><pre id="result-json"></pre></details>
+        </div>
+      </section>
+    </div>
+    <footer>CADENCE <span>Research measurements. Human context.</span><p>Uploaded audio is processed for this request and is not saved by this application.</p><p>Adapted from <a href="https://github.com/ahammadshawki8/CADENCE">CADENCE by Ahammad Shawki</a>. <a href="/voice-lab">Open Voice Lab</a>.</p></footer>
+  </main>
+</body>
+</html>

@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, File, Form, UploadFile
+from fastapi import FastAPI, HTTPException, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -27,7 +27,7 @@ class UploadLimitMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope.get("path") != "/analyze":
+        if scope["type"] != "http" or scope.get("path") not in {"/analyze", "/api/screen", "/api/vowel"}:
             return await self.app(scope, receive, send)
         maximum = MAX_UPLOAD_BYTES + 64 * 1024  # Multipart field/header overhead.
         headers = dict(scope.get("headers", []))
@@ -60,7 +60,7 @@ class PredictionRequest(BaseModel):
 
 
 def create_app(model_path: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="Voice Research Classifier", version="0.1.0")
+    app = FastAPI(title="CADENCE · Voice Research Classifier", version="0.2.0")
     app.add_middleware(UploadLimitMiddleware)
     app.state.classifier = None
     app.state.extractor = None
@@ -73,6 +73,7 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             logging.getLogger(__name__).exception("Configured classifier artifact could not be loaded")
 
     @app.get("/health")
+    @app.get("/api/health")
     def health() -> dict:
         model = app.state.classifier
         return {"status": "ready" if model is not None else "model_unavailable",
@@ -102,6 +103,7 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/config")
+    @app.get("/api/config")
     def configuration() -> dict:
         model = app.state.classifier
         return {
@@ -109,6 +111,8 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             "model_task": model.metadata["task"] if model is not None else None,
             "gemini_available": gemini_configured(), "max_upload_bytes": MAX_UPLOAD_BYTES,
             "accepted_format": "WAV", "maximum_duration_s": 300,
+            "embedding_models": model.metadata.get("embedding_models", []) if model is not None else [],
+            "tasks": ["reading", "sustained_a", "spontaneous"],
         }
 
     def analyze_audio(raw: bytes, age: float, task: str, speaker_verified: bool, use_gemini: bool) -> dict:
@@ -116,12 +120,18 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
 
         with app.state.extraction_lock:
             if app.state.extractor is None:
-                app.state.extractor = AudioExtractor()
+                models = app.state.classifier.metadata.get("embedding_models", []) if app.state.classifier is not None else []
+                try:
+                    app.state.extractor = AudioExtractor(embedding_models=models)
+                except (ValueError, ImportError) as exc:
+                    raise HTTPException(status_code=503, detail="The configured extraction dependencies are unavailable.") from exc
             extractor = app.state.extractor
             try:
                 extraction = extractor.extract(io.BytesIO(raw), speaker_verified=speaker_verified)
             except AudioInputError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except (OSError, ImportError) as exc:
+                raise HTTPException(status_code=503, detail="The configured encoder could not be loaded. Check its dependencies and weight cache.") from exc
         result = {**extraction, "age": age, "task": task, "classifier_score": None,
                   "predicted_class": None, "limitations": list(LIMITATIONS)}
         if extraction["status"] == "ok":
@@ -166,12 +176,43 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
         finally:
             await file.close()
 
+    @app.post("/api/screen")
+    async def cadence_screen(
+        request: Request,
+        audio: Annotated[UploadFile, File()],
+        age: Annotated[float, Form(ge=0, le=120, allow_inf_nan=False)],
+        speaker_verified: Annotated[bool, Form()],
+        task: Annotated[Literal["sustained_a", "reading", "spontaneous"], Form()] = "reading",
+        use_gemini: Annotated[bool, Form()] = False,
+    ) -> dict:
+        """Adapted CADENCE contract: explicit age and participant review, one WAV per request."""
+        if len((await request.form()).getlist("audio")) != 1:
+            raise HTTPException(status_code=422, detail="Send exactly one recording per request.")
+        return await analyze(audio, age, task, speaker_verified, use_gemini)
+
+    @app.post("/api/vowel")
+    async def cadence_vowel(
+        request: Request,
+        audio: Annotated[UploadFile, File()],
+        age: Annotated[float, Form(ge=0, le=120, allow_inf_nan=False)],
+        speaker_verified: Annotated[bool, Form()],
+        use_gemini: Annotated[bool, Form()] = False,
+    ) -> dict:
+        if len((await request.form()).getlist("audio")) != 1:
+            raise HTTPException(status_code=422, detail="Send exactly one recording per request.")
+        return await analyze(audio, age, "sustained_a", speaker_verified, use_gemini)
+
     frontend = Path(__file__).resolve().parent.parent / "frontend"
     if (frontend / "index.html").is_file():
         app.mount("/static", StaticFiles(directory=frontend), name="static")
 
         @app.get("/", include_in_schema=False)
         def index():
+            cadence = frontend / "cadence" / "index.html"
+            return FileResponse(cadence if cadence.is_file() else frontend / "index.html")
+
+        @app.get("/voice-lab", include_in_schema=False)
+        def voice_lab():
             return FileResponse(frontend / "index.html")
 
     return app

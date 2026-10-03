@@ -56,8 +56,15 @@ def mean_finite(values: list[float]) -> float | None:
 
 
 class AudioExtractor:
-    def __init__(self, config: ExtractionConfig | None = None):
+    def __init__(self, config: ExtractionConfig | None = None, *, embedding_models=(), local_files_only=False):
         self.config = config or ExtractionConfig()
+        self.embedding_models = tuple(embedding_models)
+        self.embeddings = None
+        if self.embedding_models:
+            from .embeddings import FrozenEmbeddings
+
+            self.embeddings = FrozenEmbeddings(self.embedding_models, local_files_only=local_files_only)
+            self.embedding_models = self.embeddings.models
         self.smile = opensmile.Smile(
             feature_set=opensmile.FeatureSet.eGeMAPSv02,
             feature_level=opensmile.FeatureLevel.Functionals,
@@ -73,6 +80,9 @@ class AudioExtractor:
             "preprocessing": "Mean stereo channels; remove DC; polyphase resample; no gain normalization.",
             "period_aggregation": "Duration-weighted means across contiguous voiced windows, at most 5 seconds each.",
         }
+        if self.embeddings is not None:
+            self.feature_names.extend(self.embeddings.feature_names)
+            self.provenance["embeddings"] = self.embeddings.provenance
         self.signature = hashlib.sha256(json.dumps(self.provenance, sort_keys=True).encode()).hexdigest()
 
     def extract(
@@ -157,6 +167,8 @@ class AudioExtractor:
                 features.update(self._praat_features(sound, pitch, frequencies, voiced))
                 smile_values = self.smile.process_signal(signal.astype(np.float32), cfg.sample_rate_hz).iloc[0]
                 features.update({"opensmile_" + name: finite(value) for name, value in smile_values.items()})
+                if speaker_verified and self.embeddings is not None:
+                    features.update(self.embeddings.extract(signal))
         quality["signal_quality_passed"] = not failures
         quality["quality_passed"] = not failures and speaker_verified
         quality["missing_features"] = [name for name, value in features.items() if value is None]

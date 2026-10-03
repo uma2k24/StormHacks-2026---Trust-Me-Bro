@@ -84,6 +84,7 @@ def extract_manifest(
             "speaker_verified": verified, "signal_quality_passed": quality["signal_quality_passed"],
             "quality_passed": quality["quality_passed"], "extraction_status": result["status"],
             "extractor_signature": extractor.signature, "start_s": start,
+            "embedding_models": ",".join(extractor.embedding_models),
             "end_s": quality.get("end_s", stop),
         })
         rows.append(output)
@@ -99,7 +100,15 @@ def extract_manifest(
         "signal_quality_passed_count": int(frame["signal_quality_passed"].sum()),
         "rows_missing_age": int(frame["age"].isna().sum()),
         "extractor_signature": extractor.signature, "extractor": extractor.provenance,
-        "feature_sets": {"acoustic": list(DEFAULT_FEATURES), "combined": extractor.feature_names},
+        "feature_sets": {
+            "acoustic": list(DEFAULT_FEATURES),
+            "egemaps": [name for name in extractor.feature_names if name.startswith("opensmile_")],
+            "combined": [name for name in extractor.feature_names if not name.startswith("embedding_")],
+            **{name: [column for column in extractor.feature_names
+                       if not column.startswith("embedding_") or column.startswith(f"embedding_{name}_")]
+               for name in extractor.embedding_models},
+            "all": extractor.feature_names,
+        },
         "recordings": recordings,
         "notes": [
             "Missing ages are preserved; this output does not establish a 50+ cohort.",

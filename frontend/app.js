@@ -1,5 +1,6 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
+const apiPrefix = document.documentElement.dataset.apiPrefix || "";
 const guides = {
   reading: "Read your study’s reference passage aloud at a comfortable pace.",
   sustained_a: "Take a comfortable breath and sustain “ah” at your usual pitch and loudness for at least 3 seconds.",
@@ -104,8 +105,8 @@ $("analysis-form").addEventListener("submit", async (event) => {
   event.preventDefault(); if (!chosenAudio || busy || recording) return;
   busy = true; controls(); error(""); $("analyze").textContent = "Analyzing…";
   try {
-    const form = new FormData(); form.append("file", chosenAudio.blob, chosenAudio.name); form.append("age", $("age").value); form.append("task", $("task").value); form.append("speaker_verified", String($("speaker-verified").checked)); form.append("use_gemini", String($("use-gemini").checked));
-    const response = await fetch("/analyze", {method: "POST", body: form}); const data = await response.json();
+    const form = new FormData(); form.append(apiPrefix ? "audio" : "file", chosenAudio.blob, chosenAudio.name); form.append("age", $("age").value); form.append("task", $("task").value); form.append("speaker_verified", String($("speaker-verified").checked)); form.append("use_gemini", String($("use-gemini").checked));
+    const response = await fetch(apiPrefix ? `${apiPrefix}/screen` : "/analyze", {method: "POST", body: form}); const data = await response.json();
     if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Check the age, task, and recording fields and try again.");
     showResult(data);
   } catch (cause) { error(cause.message || "The analysis service is unavailable. Try again."); }
@@ -113,7 +114,7 @@ $("analysis-form").addEventListener("submit", async (event) => {
 });
 async function initialize() {
   try {
-    const response = await fetch("/config"); if (!response.ok) throw new Error(); const config = await response.json();
+    const response = await fetch(`${apiPrefix}/config`); if (!response.ok) throw new Error(); const config = await response.json();
     $("service-status").textContent = config.model_available ? `A trained model is configured for ${config.model_task.replaceAll("_", " ")}. Model coverage starts at age ${config.minimum_age}.` : "The model is awaiting training. You can still check recording quality and explore acoustic measurements.";
     if (config.model_task && guides[config.model_task]) { $("task").value = config.model_task; $("task-guide").textContent = guides[config.model_task]; }
     $("use-gemini").disabled = !config.gemini_available; $("gemini-status").textContent = config.gemini_available ? "Gemini is available when selected. Local explanations are used otherwise." : "Gemini is not configured. Local explanations are available.";

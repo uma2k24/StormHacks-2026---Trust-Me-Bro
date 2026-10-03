@@ -3,10 +3,11 @@
 This feature consumes extracted voice measurements and predicts `pd_like` or
 `control_like` voice patterns. It is a research prototype. The numeric
 `classifier_score` is an uncalibrated model output, not a personal probability of
-Parkinson's disease. No trained clinical model or patient data is included.
+Parkinson's disease. No trained clinical model is included.
 
-The application includes a shared Parselmouth + openSMILE extractor, a manifest
-CLI, an audio-upload API, a recording UI, and optional Gemini-assisted reports.
+The application includes an adapted CADENCE recording interface, a shared
+Parselmouth + openSMILE extractor, optional frozen Whisper/HuBERT/WavLM embeddings,
+a manifest CLI, an audio-upload API, and optional Gemini-assisted reports.
 The feature-level classifier API remains available for other extractors.
 
 Start the local app, even before a real classifier is trained:
@@ -15,9 +16,89 @@ Start the local app, even before a real classifier is trained:
 .\.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000` to record or upload a WAV file. Without a model, the
+Open `http://127.0.0.1:8000` for CADENCE, or `/voice-lab` for the earlier UI, to
+record or upload a WAV file. Without a model, the
 app returns measurements and recording-quality feedback with `model_unavailable`
 and no prediction. It never substitutes a synthetic or demo classifier.
+
+See [CADENCE adaptation notes](../docs/CADENCE.md) for source attribution, the
+replacement `/api/screen` and `/api/vowel` contracts, and why its bundled model
+does not match this pipeline. The eight-stage protocol is Italian PVS training,
+shared acoustic extraction, optional frozen embeddings, LR/RF baselines,
+speaker-separated validation, 50+ coverage, independent task-matched MDVR-KCL
+evaluation, and constrained Gemini-assisted reports.
+
+## Frozen embedding experiments
+
+Acoustic extraction remains the default and does not require Torch or download
+model weights. Optional encoders require these additional dependencies:
+
+```powershell
+python -m pip install -r backend/requirements-embeddings.txt
+python -m backend.classifier extract --manifest data/manifests/italian_pvs.csv --output data/features/italian_pvs.csv --embeddings whisper hubert wavlm
+```
+
+Each recording is resampled by the shared extractor to 16 kHz. The frozen audio
+encoders run on CPU in inference mode, on consecutive 20-second chunks, using
+the last hidden layer. Pooling returns the global frame-weighted mean and
+population standard deviation; Whisper's padded frames are excluded. A final
+tail under 100 ms is discarded. There is no transcription, fine tuning, learned
+pooling, or dataset-wide normalization. Embeddings run only after signal quality
+passes and the participant-only review flag is true.
+
+| Profile | Checkpoint | Embedding columns |
+| --- | --- | --- |
+| `whisper` | `openai/whisper-tiny` (multilingual audio encoder) | 768 |
+| `hubert` | `facebook/hubert-base-ls960` | 1536 |
+| `wavlm` | `microsoft/wavlm-base-plus` | 1536 |
+
+Immutable model revisions are in `backend/audio/embeddings.py`; the extraction
+report records them, Torch/Transformers versions, pooling and chunk settings.
+First use downloads weights to the standard Hugging Face cache. Extraction's
+`--local-models-only` flag requires cached weights. Whisper uses safetensors;
+the pinned HuBERT/WavLM publisher snapshots supply PyTorch weights, loaded with
+the restricted `weights_only=True` loader (Torch 2.6+). Remote model code is
+disabled. Checkpoint licenses/model cards remain
+those of their respective publishers. Serving needs the optional dependencies
+and weights when the artifact specifies embeddings; unavailable encoders return
+HTTP 503. The saved profile recreates the same extraction signature at inference.
+
+The `.features.json` output lists `acoustic` (9 Parselmouth), `egemaps` (88),
+`combined` (97 acoustic), each requested encoder profile (97 plus that encoder),
+and `all` (3937 when all three are enabled). Compare fixed baselines on the same
+eligible speakers. Example commands after preparing a verified Italian manifest:
+
+```powershell
+python -m backend.classifier train --csv data/features/italian_pvs.ready.csv --dataset italian_pvs --task reading --feature-set combined --model logistic_regression --cv groupkfold --folds 5 --output backend/artifacts/acoustic_lr.joblib
+python -m backend.classifier train --csv data/features/italian_pvs.ready.csv --dataset italian_pvs --task reading --feature-set combined --model random_forest --cv loso --output backend/artifacts/acoustic_rf.joblib
+python -m backend.classifier train --csv data/features/italian_pvs.ready.csv --dataset italian_pvs --task reading --feature-set whisper --model logistic_regression --cv groupkfold --folds 5 --output backend/artifacts/whisper_lr.joblib
+```
+
+Repeat the last experiment with `hubert`, `wavlm`, then `all` only if justified
+by training-cohort validation. `--feature-set` reads the sibling schema for both
+the complete CSV and its `.ready.csv`; `--feature-schema` supplies another path.
+All imputation and scaling remain inside speaker-separated folds. These are
+fixed comparisons, not nested model selection; reported CV cannot be reused as
+an unbiased estimate after choosing a winner.
+
+Extract the verified, age-annotated MDVR manifest with the **same embedding
+profile**, select matched reading recordings, and evaluate the selected frozen
+artifact without refitting:
+
+```powershell
+python -m backend.classifier extract --manifest data/manifests/mdvr_kcl.csv --output data/features/mdvr_kcl.csv --embeddings whisper hubert wavlm
+python -m backend.classifier evaluate --model backend/artifacts/whisper_lr.joblib --csv data/features/mdvr_kcl.ready.csv --dataset mdvr_kcl --output backend/artifacts/external_mdvr.json
+$env:CLASSIFIER_MODEL_PATH = 'backend/artifacts/whisper_lr.joblib'
+python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+```
+
+An artifact trained from an all-encoder extraction keeps that full extraction
+profile even when its classifier uses a subset, to preserve the provenance
+signature. For lighter serving, run extraction and training again with only the
+encoder retained after the experiment. Do not tune encoders, hyperparameters or
+thresholds on MDVR-KCL. Its ages and participant-only segments still need verified
+metadata/review; the current manifest is not evaluation-ready. There is no real
+trained model included in this adaptation.
 
 ## Setup
 
@@ -93,10 +174,10 @@ evaluation.** The CSV quality flag is enforced when present.
 To add openSMILE measurements or one frozen embedding model, pass an explicit
 `--features` list containing the desired CSV columns. The exact order and names
 are saved with the artifact. All inference keys must match that feature set.
-Metadata columns cannot be selected as voice features. Parselmouth and openSMILE
-extraction are implemented below; Whisper, HuBERT, and WavLM embeddings remain
-separate experiments. The upload API supports only features produced by the
-shared acoustic extractor.
+Metadata columns cannot be selected as voice features. The shared extractor
+supports Parselmouth, openSMILE and the optional encoder profiles described
+above. The upload API recreates the model's extraction profile and only scores
+compatible features.
 
 ## Audio extraction and recording review
 

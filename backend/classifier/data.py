@@ -16,7 +16,7 @@ METADATA = frozenset({
     "source_speaker_id", "sample_rate_hz", "channels", "sample_width_bits",
     "duration_s",
     "speaker_verified", "signal_quality_passed", "extraction_status",
-    "extractor_signature", "start_s", "end_s",
+    "extractor_signature", "embedding_models", "start_s", "end_s",
 })
 MIN_AGE = 50
 
