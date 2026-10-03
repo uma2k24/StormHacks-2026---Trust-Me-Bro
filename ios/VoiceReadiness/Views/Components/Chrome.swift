@@ -73,11 +73,13 @@ private struct PopIn: ViewModifier {
 
 // MARK: - Flow layout
 
-/// Wraps its children like words in a paragraph, centring each line. Used for headlines where one
-/// word carries the highlighter, so the line can break between words at any text size.
+/// Wraps its children like words in a paragraph, centring each line (or starting each at the
+/// leading edge when `centered` is off). Used for headlines where one word carries the
+/// highlighter, and for rows of chips, so lines can break between items at any text size.
 struct CenteredFlowLayout: Layout {
     var spacing: CGFloat = 10
     var lineSpacing: CGFloat = 0
+    var centered = true
 
     private struct Row {
         var indices: [Int] = []
@@ -113,7 +115,7 @@ struct CenteredFlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
         for row in rows(maxWidth: bounds.width, subviews: subviews) {
-            var x = bounds.minX + (bounds.width - row.width) / 2
+            var x = bounds.minX + (centered ? (bounds.width - row.width) / 2 : 0)
             for index in row.indices {
                 let size = subviews[index].sizeThatFits(.unspecified)
                 subviews[index].place(
@@ -322,16 +324,18 @@ struct Pinstripes: View {
 /// Pill button that physically presses down into its shadow.
 struct PillButtonStyle: ButtonStyle {
     var fill: Color = .white
+    /// The extra-big version, for the buttons that matter most (Settings, Done).
+    var large = false
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
         configuration.label
-            .font(AppFont.body(21, bold: true))
+            .font(AppFont.body(large ? 24 : 21, bold: true))
             .foregroundStyle(AppTheme.ink)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, minHeight: 64)
+            .frame(maxWidth: .infinity, minHeight: large ? 76 : 64)
             .background(Capsule().fill(fill))
             .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 3) }
             .hardShadow(Capsule(), offset: pressed ? 0 : 5)
@@ -465,28 +469,8 @@ struct BrandMark: View {
     }
 }
 
-private struct KeyStyle: ButtonStyle {
-    let selected: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        let pressed = configuration.isPressed
-        configuration.label
-            .foregroundStyle(AppTheme.ink)
-            .frame(width: 46, height: 46)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? AppTheme.teal : Color.white))
-            .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(AppTheme.ink, lineWidth: 2.5) }
-            .background {
-                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppTheme.ink).offset(y: pressed ? 0 : 3)
-            }
-            .offset(y: pressed ? 3 : 0)
-            .animation(.easeOut(duration: 0.08), value: pressed)
-    }
-}
-
-/// Mac-style menu bar: brand on the left, text-size control on the right.
+/// Mac-style menu bar: brand on the left.
 struct AppBar: View {
-    @Binding var textSize: TextSizeStep
-
     var body: some View {
         HStack(spacing: 10) {
             BrandMark().frame(width: 40, height: 40)
@@ -499,21 +483,6 @@ struct AppBar: View {
                 .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 4)
-
-            HStack(spacing: 6) {
-                ForEach(TextSizeStep.allCases) { step in
-                    Button {
-                        textSize = step
-                    } label: {
-                        Text("A").font(AppFont.fixedHead(step.glyphSize))
-                    }
-                    .buttonStyle(KeyStyle(selected: textSize == step))
-                    .accessibilityLabel(step.label)
-                    .accessibilityAddTraits(textSize == step ? .isSelected : [])
-                }
-            }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Text size")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

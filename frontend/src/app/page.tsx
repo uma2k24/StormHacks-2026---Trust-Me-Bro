@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { MotionConfig } from "framer-motion";
 import { ActiveScreen } from "@/components/ActiveScreen";
 import { AppBar } from "@/components/AppBar";
@@ -8,40 +8,75 @@ import { Confetti } from "@/components/Confetti";
 import { IdleScreen } from "@/components/IdleScreen";
 import { ProcessingScreen } from "@/components/ProcessingScreen";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
-import { type Briefing, mockBriefing } from "@/data/checkInScript";
+import { SettingsScreen } from "@/components/SettingsScreen";
+import { SignUpScreen } from "@/components/SignUpScreen";
+import { type Briefing, mockBriefingFor } from "@/data/checkInScript";
 import { mockResults } from "@/data/mockResults";
+import { demoProfile, type Profile, profileKey } from "@/data/profile";
 import { prefetchClip, unlockRadioVoice } from "@/lib/radioVoice";
+import { saveProfile, useProfile, useTextSize } from "@/lib/storage";
 import type { AppScreen } from "@/types/screening";
 
-function screenFromQuery(): AppScreen {
-  const value = new URLSearchParams(window.location.search).get("screen");
-  if (value === "recording" || value === "chat") return "recording";
-  if (value === "processing") return "processing";
-  if (value === "results") return "results";
-  return "idle";
+type Launch = { screen: AppScreen; step: number; demo: boolean };
+
+/** Demo links: ?screen=signup|settings|idle|recording|processing|results (and ?step=0-5 for sign-up). */
+function launchFrom(search: string): Launch {
+  const params = new URLSearchParams(search);
+  const value = params.get("screen");
+  const step = Number(params.get("step")) || 0;
+  const demo = value !== null; // jumping straight to a screen: no need to sign up first
+  if (value === "signup") return { screen: "signup", step, demo };
+  if (value === "settings") return { screen: "settings", step, demo };
+  if (value === "recording" || value === "chat") return { screen: "recording", step, demo };
+  if (value === "processing") return { screen: "processing", step, demo };
+  if (value === "results") return { screen: "results", step, demo };
+  return { screen: "idle", step, demo };
 }
 
+const neverChanges = () => () => {};
+
 export default function Home() {
-  const [screen, setScreen] = useState<AppScreen>("idle");
-  // Today's show: the mock plays until the live briefing arrives. It's frozen once the show starts.
-  const [briefing, setBriefing] = useState<Briefing>(mockBriefing);
+  const stored = useProfile(); // undefined until the browser has been asked
+  const textSize = useTextSize();
+  const search = useSyncExternalStore(
+    neverChanges,
+    () => window.location.search,
+    () => "",
+  );
+  const launch = useMemo(() => launchFrom(search), [search]);
+  // Where the person has navigated to; until they do, the screen the link asked for.
+  const [navigated, setScreen] = useState<AppScreen | null>(null);
+  const screen = navigated ?? launch.screen;
   const [onAir, setOnAir] = useState<Briefing | null>(null);
-  const briefingRef = useRef(briefing);
+  // Today's live show, and which profile it was written for.
+  const [live, setLive] = useState<{ key: string; briefing: Briefing } | null>(null);
+
+  // The text size is a page-wide setting, so it lives on <html> where the CSS reads it.
+  useEffect(() => {
+    document.documentElement.dataset.textSize = textSize;
+  }, [textSize]);
+
+  const profile: Profile | null | undefined =
+    stored === undefined ? undefined : (stored ?? (launch.demo ? demoProfile : null));
+  const key = profile ? profileKey(profile) : null;
+  // The mock plays until the live briefing arrives. It's frozen once the show starts.
+  const briefing: Briefing =
+    live && live.key === key ? live.briefing : mockBriefingFor(profile ?? demoProfile);
 
   useEffect(() => {
-    setScreen(screenFromQuery());
-  }, []);
-
-  useEffect(() => {
+    if (!profile || !key) return;
+    const params = new URLSearchParams({
+      name: profile.name,
+      city: profile.city,
+      interests: profile.interests.join(","),
+      extras: profile.extras,
+    });
     const controller = new AbortController();
-    fetch(`/api/briefing?name=${encodeURIComponent(mockResults.user)}`, {
-      signal: controller.signal,
-    })
+    fetch(`/api/briefing?${params}`, { signal: controller.signal })
       .then((response) => (response.ok ? (response.json() as Promise<Briefing>) : null))
       .then((data) => {
         if (!data?.segments?.length) return;
-        briefingRef.current = data;
-        setBriefing(data);
+        setLive({ key, briefing: data });
         // have the opening line ready so Play starts talking straight away
         prefetchClip(data.segments[0].brief);
       })
@@ -49,46 +84,67 @@ export default function Home() {
         // offline or no backend: the mock show is fine
       });
     return () => controller.abort();
-  }, []);
+    // key stands for every field of the profile that shapes the show
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   const startCheckIn = useCallback(() => {
     unlockRadioVoice(); // inside the tap, so the browser lets the radio speak
-    setOnAir(briefingRef.current);
+    setOnAir(briefing);
     setScreen("recording");
-  }, []);
+  }, [briefing]);
   const finishRecording = useCallback(() => setScreen("processing"), []);
   const showResults = useCallback(() => setScreen("results"), []);
   const restart = useCallback(() => setScreen("idle"), []);
+  const openSettings = useCallback(() => setScreen("settings"), []);
+  const saveAndGoHome = useCallback((next: Profile) => {
+    saveProfile(next);
+    setScreen("idle");
+  }, []);
+
+  // Nobody has signed up yet: the only way in is the sign-up flow.
+  const current: AppScreen | null =
+    profile === undefined ? null : profile === null ? "signup" : screen;
 
   return (
     // reducedMotion="user" makes framer-motion honour the OS "reduce motion" setting.
     <MotionConfig reducedMotion="user">
       <Confetti />
-      <div className="app-shell flex flex-col" data-screen={screen}>
+      <div className="app-shell flex flex-col" data-screen={current ?? "idle"}>
         <AppBar />
 
         <main className="shell app-main">
-          {screen === "idle" ? (
+          {current === "signup" ? (
+            <SignUpScreen onComplete={saveAndGoHome} initialStep={launch.step} />
+          ) : null}
+
+          {current === "settings" && profile ? (
+            <SettingsScreen profile={profile} onDone={saveAndGoHome} />
+          ) : null}
+
+          {current === "idle" && profile ? (
             <IdleScreen
-              userName={mockResults.user}
+              userName={profile.name}
               segments={briefing.segments}
               onStart={startCheckIn}
+              onOpenSettings={openSettings}
             />
           ) : null}
 
-          {screen === "recording" ? (
+          {current === "recording" ? (
             <ActiveScreen
               segments={(onAir ?? briefing).segments}
               onComplete={finishRecording}
             />
           ) : null}
 
-          {screen === "processing" ? (
-            <ProcessingScreen onComplete={showResults} />
-          ) : null}
+          {current === "processing" ? <ProcessingScreen onComplete={showResults} /> : null}
 
-          {screen === "results" ? (
-            <ResultsDashboard results={mockResults} onRestart={restart} />
+          {current === "results" && profile ? (
+            <ResultsDashboard
+              results={{ ...mockResults, user: profile.name }}
+              onRestart={restart}
+            />
           ) : null}
         </main>
       </div>

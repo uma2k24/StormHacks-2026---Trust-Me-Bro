@@ -1,4 +1,16 @@
-import { CloudSun, MapPin, Newspaper, Trophy, type LucideProps } from "lucide-react";
+import {
+  BookOpen,
+  ChefHat,
+  CloudSun,
+  Landmark,
+  MapPin,
+  Music,
+  Newspaper,
+  PawPrint,
+  Sprout,
+  Trophy,
+  type LucideProps,
+} from "lucide-react";
 import type { SegmentKind } from "@/data/checkInScript";
 
 const ICONS = {
@@ -6,6 +18,12 @@ const ICONS = {
   sports: Trophy,
   news: Newspaper,
   local: MapPin,
+  garden: Sprout,
+  music: Music,
+  food: ChefHat,
+  nature: PawPrint,
+  history: Landmark,
+  arts: BookOpen,
 } satisfies Record<SegmentKind, unknown>;
 
 /** The little picture for a briefing segment. Mirrors SegmentKind.systemImage on iOS. */

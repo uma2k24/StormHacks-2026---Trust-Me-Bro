@@ -28,6 +28,10 @@
 		AF8192A3C4D5E6F708192A3B /* AtkinsonHyperlegible-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9E708192B3C4D5E6F708192A /* AtkinsonHyperlegible-Bold.ttf */; };
 		C1A34BC5D6E7F8091A2B3C4D /* BricolageGrotesque-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B0923AB4C5D6E7F8091A2B3C /* BricolageGrotesque-ExtraBold.ttf */; };
 		DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 623F283978454BC98621FE5A /* Assets.xcassets */; };
+		AB1C2D3E4F5061728394A5B1 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B2 /* Profile.swift */; };
+		AB1C2D3E4F5061728394A5B3 /* Forms.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B4 /* Forms.swift */; };
+		AB1C2D3E4F5061728394A5B5 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */; };
+		AB1C2D3E4F5061728394A5B7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +59,10 @@
 		D2B45CD6E7F8091A2B3C4D5E /* OFL-AtkinsonHyperlegible.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-AtkinsonHyperlegible.txt"; sourceTree = "<group>"; };
 		E3C56DE7F8091A2B3C4D5E6F /* OFL-BricolageGrotesque.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-BricolageGrotesque.txt"; sourceTree = "<group>"; };
 		623F283978454BC98621FE5A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB1C2D3E4F5061728394A5B2 /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
+		AB1C2D3E4F5061728394A5B4 /* Forms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Forms.swift; sourceTree = "<group>"; };
+		AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +111,7 @@
 				F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */,
 				D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */,
 				B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */,
+				AB1C2D3E4F5061728394A5B2 /* Profile.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -114,6 +123,8 @@
 				9E56B5488BD045F087A32E49 /* RecordingView.swift */,
 				E5729BE7C8004650B2F05570 /* ProcessingView.swift */,
 				6289B03D9FD94A6292C4C643 /* ResultsView.swift */,
+				AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */,
+				AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */,
 				9EE3413345544C688AF8D169 /* Components */,
 			);
 			path = Views;
@@ -130,6 +141,7 @@
 				0B0223900F4B4CFD98FE069E /* TrendChartView.swift */,
 				3F1A2B4C5D6E7F8091A2B3C4 /* Chrome.swift */,
 				5A3C4D6E7F8091A2B3C4D5E6 /* Theme.swift */,
+				AB1C2D3E4F5061728394A5B4 /* Forms.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -235,6 +247,10 @@
 				D82FC20750CE4657873CC6EF /* TrendChartView.swift in Sources */,
 				4E2B3C5D6F708192A3B4C5D6 /* Chrome.swift in Sources */,
 				6B4D5E7F8091A2B3C4D5E6F7 /* Theme.swift in Sources */,
+				AB1C2D3E4F5061728394A5B7 /* SettingsView.swift in Sources */,
+				AB1C2D3E4F5061728394A5B5 /* SignUpView.swift in Sources */,
+				AB1C2D3E4F5061728394A5B3 /* Forms.swift in Sources */,
+				AB1C2D3E4F5061728394A5B1 /* Profile.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,6 +1,8 @@
 import SwiftUI
 
 enum AppScreen {
+    case signUp
+    case settings
     case idle
     case recording
     case processing
@@ -74,6 +76,20 @@ struct ScreeningResults {
     let trendData: [TrendPoint]
     let yesterdayScore: Int
     let yesterdayLabel: String
+
+    /// The same results, addressed to whoever signed up.
+    func addressed(to name: String) -> ScreeningResults {
+        ScreeningResults(
+            user: name,
+            readinessScore: readinessScore,
+            statusColor: statusColor,
+            aiSummary: aiSummary,
+            metrics: metrics,
+            trendData: trendData,
+            yesterdayScore: yesterdayScore,
+            yesterdayLabel: yesterdayLabel
+        )
+    }
 
     static let mock = ScreeningResults(
         user: "David",

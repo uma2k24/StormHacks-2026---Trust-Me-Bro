@@ -30,11 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      data-text-size="standard"
-      className={`${body.variable} ${display.variable}`}
-    >
+    <html lang="en" className={`${body.variable} ${display.variable}`}>
       <body>{children}</body>
     </html>
   );

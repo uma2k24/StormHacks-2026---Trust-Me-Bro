@@ -18,13 +18,18 @@ enum BriefingService {
         return URL(string: "http://127.0.0.1:3000")!
     }
 
-    /// Today's show, or nil when the backend can't be reached.
-    static func fetchBriefing(name: String) async -> Briefing? {
+    /// Today's show for this listener, or nil when the backend can't be reached.
+    static func fetchBriefing(for profile: Profile) async -> Briefing? {
         var components = URLComponents(
             url: baseURL.appending(path: "api/briefing"),
             resolvingAgainstBaseURL: false
         )
-        components?.queryItems = [URLQueryItem(name: "name", value: name)]
+        components?.queryItems = [
+            URLQueryItem(name: "name", value: profile.name),
+            URLQueryItem(name: "city", value: profile.city),
+            URLQueryItem(name: "interests", value: profile.interests.map(\.rawValue).joined(separator: ",")),
+            URLQueryItem(name: "extras", value: profile.extras)
+        ]
         guard let url = components?.url else { return nil }
 
         var request = URLRequest(url: url)

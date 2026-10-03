@@ -76,37 +76,3 @@ enum FontRegistrar {
         }
     }
 }
-
-/// In-app text size, layered on top of the system Dynamic Type setting.
-enum TextSizeStep: Int, CaseIterable, Identifiable {
-    case standard
-    case large
-    case largest
-
-    var id: Int { rawValue }
-
-    var label: String {
-        switch self {
-        case .standard: return "Standard text size"
-        case .large: return "Large text size"
-        case .largest: return "Largest text size"
-        }
-    }
-
-    var glyphSize: CGFloat {
-        switch self {
-        case .standard: return 17
-        case .large: return 23
-        case .largest: return 30
-        }
-    }
-
-    /// Never smaller than what the person already chose in iOS Settings.
-    func dynamicTypeSize(system: DynamicTypeSize) -> DynamicTypeSize {
-        switch self {
-        case .standard: return system
-        case .large: return max(system, .xxxLarge)
-        case .largest: return max(system, .accessibility1)
-        }
-    }
-}

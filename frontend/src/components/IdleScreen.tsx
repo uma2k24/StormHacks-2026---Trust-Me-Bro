@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { Radio } from "lucide-react";
+import { Radio, Settings } from "lucide-react";
 import { SegmentIcon } from "@/components/SegmentIcon";
 import type { BriefingSegment } from "@/data/checkInScript";
 
@@ -9,11 +9,12 @@ type IdleScreenProps = {
   userName: string;
   segments: BriefingSegment[];
   onStart: () => void;
+  onOpenSettings: () => void;
 };
 
-export function IdleScreen({ userName, segments, onStart }: IdleScreenProps) {
+export function IdleScreen({ userName, segments, onStart, onOpenSettings }: IdleScreenProps) {
   return (
-    <section className="flex flex-1 flex-col items-center justify-between gap-14 text-center">
+    <section className="flex flex-1 flex-col items-center justify-between gap-5 text-center">
       <header className="w-full">
         <h1 className="display h1">
           Good Morning, <span className="marker">{userName}</span>.
@@ -53,6 +54,14 @@ export function IdleScreen({ userName, segments, onStart }: IdleScreenProps) {
           ))}
         </span>
       </div>
+
+      {/* pinned to the bottom, so Settings is always in reach however large the text is */}
+      <nav className="pager-nav idle-settings w-full" aria-label="Settings">
+        <button type="button" onClick={onOpenSettings} className="btn btn-block btn-big">
+          <Settings className="h-8 w-8" strokeWidth={2.5} aria-hidden="true" />
+          Settings
+        </button>
+      </nav>
     </section>
   );
 }

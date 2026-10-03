@@ -4,33 +4,42 @@ struct IdleView: View {
     let userName: String
     let segments: [BriefingSegment]
     let onStart: () -> Void
+    let onOpenSettings: () -> Void
 
-    @ScaledMetric(relativeTo: .largeTitle) private var headlineSize: CGFloat = 46
+    @ScaledMetric(relativeTo: .largeTitle) private var headlineSize: CGFloat = 38
     @ScaledMetric(relativeTo: .body) private var orbBase: CGFloat = 220
 
     var body: some View {
-        GeometryReader { proxy in
-            // the big button shrinks on short screens instead of forcing a scroll
-            let orb = min(orbBase, 270, proxy.size.height * 0.31)
+        VStack(spacing: 0) {
+            GeometryReader { proxy in
+                // the big button shrinks on short screens instead of forcing a scroll
+                let orb = min(orbBase, 270, proxy.size.height * 0.26)
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    header
+                ScrollView {
+                    VStack(spacing: 0) {
+                        header
 
-                    Spacer(minLength: 40)
+                        Spacer(minLength: 12)
 
-                    startButton(size: orb)
+                        startButton(size: orb)
 
-                    Spacer(minLength: 40)
+                        Spacer(minLength: 12)
 
-                    lineup
+                        lineup
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+                    .frame(minHeight: proxy.size.height)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 28)
-                .padding(.bottom, 8)
-                .frame(minHeight: proxy.size.height)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
+
+            // pinned, so Settings is always in reach however large the text is
+            settingsButton
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
         }
     }
 
@@ -53,7 +62,7 @@ struct IdleView: View {
             .accessibilityAddTraits(.isHeader)
 
             Text("Your morning radio is ready.\nTap to tune in.")
-                .font(AppFont.body(22))
+                .font(AppFont.body(20))
                 .foregroundStyle(AppTheme.inkSoft)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -76,8 +85,19 @@ struct IdleView: View {
             .buttonStyle(OrbButtonStyle(size: size))
             .accessibilityLabel("Tap to play your morning radio")
         }
-        .padding(.vertical, 24)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
+    }
+
+    private var settingsButton: some View {
+        Button(action: onOpenSettings) {
+            HStack(spacing: 14) {
+                Image(systemName: "gearshape.fill").font(.system(size: 28, weight: .semibold))
+                Text("Settings")
+            }
+        }
+        .buttonStyle(PillButtonStyle(large: true))
+        .padding(.trailing, 5)
     }
 
     private var lineup: some View {
@@ -89,10 +109,7 @@ struct IdleView: View {
                 .font(AppFont.body(20, bold: true))
                 .foregroundStyle(AppTheme.inkSoft)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { chips }
-                VStack(alignment: .leading, spacing: 8) { chips }
-            }
+            CenteredFlowLayout(spacing: 8, lineSpacing: 8, centered: false) { chips }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)

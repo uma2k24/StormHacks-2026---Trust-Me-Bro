@@ -38,10 +38,17 @@ export async function POST(request: Request) {
   });
 
   if (!upstream?.ok || !upstream.body) {
-    if (upstream) {
-      console.error(`[speech] ElevenLabs ${upstream.status}:`, (await upstream.text()).slice(0, 300));
-    }
-    return Response.json({ error: "voice-failed" }, { status: 502 });
+    const detail = upstream ? (await upstream.text()).slice(0, 300) : "network-error";
+    console.error(
+      upstream
+        ? `[speech] ElevenLabs ${upstream.status}: ${detail}`
+        : "[speech] ElevenLabs request failed: network-error",
+    );
+    // Include a short upstream hint so a bad key/quota shows up in the browser network tab.
+    return Response.json(
+      { error: "voice-failed", upstreamStatus: upstream?.status ?? 0, detail },
+      { status: 502 },
+    );
   }
 
   return new Response(upstream.body, {
