@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 const MESSAGES = [
-  "Analyzing your voice...",
-  "Comparing to your normal baseline...",
-  "Getting your results...",
+  "Hearing you back…",
+  "Comparing to your usual…",
+  "Almost there…",
 ] as const;
 
 type ProcessingScreenProps = {

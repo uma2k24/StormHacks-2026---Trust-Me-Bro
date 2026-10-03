@@ -50,14 +50,14 @@ export function IdleScreen({
             type="button"
             onClick={onStart}
             className="relative z-10 flex h-40 w-40 items-center justify-center rounded-full bg-amber-300 text-slate-950 shadow-[0_0_40px_rgba(245,197,24,0.45)] transition hover:bg-amber-200 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:scale-[0.98] sm:h-48 sm:w-48"
-            aria-label="Tap to start your daily voice check-in"
+            aria-label="Tap to start a conversational check-in"
           >
             <Mic className="h-20 w-20 stroke-[2.25] sm:h-24 sm:w-24" aria-hidden="true" />
           </button>
         </div>
 
         <p className="max-w-md text-center text-2xl font-medium leading-snug text-slate-100 sm:text-3xl">
-          Tap to start your daily voice check-in.
+          Want to check in? Just tap and we&apos;ll talk.
         </p>
       </div>
 

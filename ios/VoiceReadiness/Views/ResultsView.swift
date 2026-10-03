@@ -8,11 +8,11 @@ struct ResultsView: View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 10) {
-                    Text("Check-in Complete")
+                    Text("Nice talking with you")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(AppTheme.accent.opacity(0.9))
 
-                    Text("Here's your readiness today, \(results.user).")
+                    Text("Thanks, \(results.user) — here's how you're looking today.")
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)

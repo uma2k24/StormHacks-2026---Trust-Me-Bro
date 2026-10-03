@@ -49,10 +49,10 @@ struct IdleView: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Tap to start your daily voice check-in")
+            .accessibilityLabel("Tap to start a conversational check-in")
             .frame(minWidth: 176, minHeight: 176)
 
-            Text("Tap to start your daily voice check-in.")
+            Text("Want to check in? Just tap and we'll talk.")
                 .font(.title2.weight(.medium))
                 .foregroundStyle(AppTheme.textPrimary)
                 .multilineTextAlignment(.center)

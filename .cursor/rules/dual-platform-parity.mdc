@@ -1,0 +1,36 @@
+---
+description: Keep the Next.js frontend and iOS SwiftUI app in sync for all UX/UI changes
+alwaysApply: true
+---
+
+# Dual-platform parity (web + iOS)
+
+This project has two mockup clients that must stay aligned:
+
+- Web: `frontend/` (Next.js / React / TypeScript)
+- iOS: `ios/VoiceReadiness/` (SwiftUI)
+
+## Required behavior
+
+When the user asks for UX, UI, copy, flow, screen, or mock-data changes:
+
+1. Update **both** platforms in the same turn unless they explicitly say otherwise.
+2. Mirror the same screens, copy, and interaction flow (idle → conversation → processing → results).
+3. Keep mock scripts/data equivalent across:
+   - `frontend/src/data/`
+   - `ios/VoiceReadiness/Models/`
+4. If a change only makes sense on one platform, still check the other and note any intentional divergence.
+
+## Rough mapping
+
+| Web | iOS |
+|---|---|
+| `src/app/page.tsx` | `ContentView.swift` |
+| `IdleScreen.tsx` | `IdleView.swift` |
+| `ActiveScreen.tsx` | `RecordingView.swift` |
+| `ProcessingScreen.tsx` | `ProcessingView.swift` |
+| `ResultsDashboard.tsx` | `ResultsView.swift` |
+| `src/data/checkInScript.ts` | `Models/CheckInScript.swift` |
+| `src/data/mockResults.ts` | `Models/ScreeningModels.swift` |
+
+Do not assume updating only `frontend/` is enough — the Xcode simulator runs the iOS app.

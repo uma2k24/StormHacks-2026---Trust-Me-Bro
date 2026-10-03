@@ -20,10 +20,10 @@ export function ResultsDashboard({
     <section className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-10 sm:px-8">
       <header className="text-center">
         <p className="text-lg font-medium text-amber-200/90">
-          Check-in Complete
+          Nice talking with you
         </p>
         <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-          Here&apos;s your readiness today, {results.user}.
+          Thanks, {results.user} — here&apos;s how you&apos;re looking today.
         </h1>
       </header>
 

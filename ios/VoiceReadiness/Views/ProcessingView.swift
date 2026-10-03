@@ -4,9 +4,9 @@ struct ProcessingView: View {
     let onComplete: () -> Void
 
     private let messages = [
-        "Analyzing your voice...",
-        "Comparing to your normal baseline...",
-        "Getting your results..."
+        "Hearing you back…",
+        "Comparing to your usual…",
+        "Almost there…"
     ]
 
     @State private var messageIndex = 0
