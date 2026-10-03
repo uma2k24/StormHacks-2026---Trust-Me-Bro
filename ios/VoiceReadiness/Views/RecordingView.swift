@@ -54,6 +54,16 @@ struct RecordingView: View {
         }
     }
 
+    /// Longer text reads a size down so it usually fits; whatever still doesn't fit scrolls.
+    /// Mirrors captionSize() in ActiveScreen.tsx.
+    private var captionFontSize: CGFloat {
+        switch caption.count {
+        case ...60: return 34
+        case ...120: return 27
+        default: return 22
+        }
+    }
+
     private var screenColor: Color {
         switch phase {
         case .listening: return AppTheme.accentGlow
@@ -161,15 +171,14 @@ struct RecordingView: View {
             .foregroundStyle(screenColor)
             .opacity(0.85)
 
-            // a brief is longer than a question, so it reads a size down
-            Text(caption)
-                .font(AppFont.head(phase == .briefing ? 27 : 34, relativeTo: .title))
-                .tracking(-0.3)
-                .foregroundStyle(screenColor)
-                .shadow(color: screenColor.opacity(0.6), radius: 9)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .id(captionKey)
+            // Centered when it fits; when it doesn't (long brief, big text size) it scrolls.
+            ViewThatFits(in: .vertical) {
+                captionText
+
+                FadingScroll { captionText.padding(.vertical, 12) }
+            }
+            .frame(maxWidth: .infinity)
+            .id(captionKey)
                 .transition(
                     .asymmetric(
                         insertion: .opacity.combined(with: .offset(y: 14))
@@ -215,6 +224,17 @@ struct RecordingView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(turn.topic). \(caption)")
         .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var captionText: some View {
+        Text(caption)
+            .font(AppFont.head(captionFontSize, relativeTo: .title))
+            .tracking(-0.3)
+            .foregroundStyle(screenColor)
+            .shadow(color: screenColor.opacity(0.6), radius: 9)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
     }
 
     private var controls: some View {
@@ -363,6 +383,78 @@ struct RecordingView: View {
         case .ready: startListening()
         case .listening: finish()
         default: break
+        }
+    }
+}
+
+private struct ScrollMetrics: Equatable {
+    var contentHeight: CGFloat = 0
+    var scrolled: CGFloat = 0
+}
+
+private struct ScrollMetricsKey: PreferenceKey {
+    static let defaultValue = ScrollMetrics()
+    static func reduce(value: inout ScrollMetrics, nextValue: () -> ScrollMetrics) {
+        value = nextValue()
+    }
+}
+
+/// A vertical scroll view that fades its bottom edge while there is more to read below
+/// (the web screen's `.radio-scroll[data-scroll="more"]`). iOS 17 has no scroll-offset API, so
+/// the content reports its own height and position through a preference.
+private struct FadingScroll<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    @State private var viewportHeight: CGFloat = 0
+    @State private var metrics = ScrollMetrics()
+
+    private var moreBelow: Bool {
+        metrics.contentHeight - metrics.scrolled - viewportHeight > 2
+    }
+
+    var body: some View {
+        ScrollView(.vertical) {
+            content.background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: ScrollMetricsKey.self,
+                        value: ScrollMetrics(
+                            contentHeight: proxy.size.height,
+                            scrolled: -proxy.frame(in: .named("fadingScroll")).minY
+                        )
+                    )
+                }
+            }
+        }
+        .coordinateSpace(name: "fadingScroll")
+        .onPreferenceChange(ScrollMetricsKey.self) { metrics = $0 }
+        .onGeometryChangeCompat { viewportHeight = $0 }
+        .scrollIndicators(.visible)
+        .scrollIndicatorsFlash(onAppear: true)
+        .scrollBounceBehavior(.basedOnSize)
+        .mask {
+            LinearGradient(
+                stops: [
+                    .init(color: .black, location: 0),
+                    .init(color: .black, location: 0.85),
+                    .init(color: moreBelow ? .clear : .black, location: 1),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+}
+
+private extension View {
+    /// Reports this view's height (iOS 17 has no onGeometryChange).
+    func onGeometryChangeCompat(_ perform: @escaping (CGFloat) -> Void) -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { perform(proxy.size.height) }
+                    .onChange(of: proxy.size.height) { _, height in perform(height) }
+            }
         }
     }
 }

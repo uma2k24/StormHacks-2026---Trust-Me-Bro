@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Mic } from "lucide-react";
 import { SegmentIcon } from "@/components/SegmentIcon";
@@ -31,6 +31,16 @@ type ActiveScreenProps = {
   onComplete: () => void;
 };
 
+/** Longer text reads a size down so it usually fits; whatever still doesn't fit scrolls. */
+function captionSize(text: string): "large" | "medium" | "small" {
+  if (text.length <= 60) return "large";
+  if (text.length <= 120) return "medium";
+  return "small";
+}
+
+/** Whether the caption overflows its box, and if so whether there's more below. */
+type ScrollState = "none" | "more" | "end";
+
 export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
   const [turnIndex, setTurnIndex] = useState(0);
   const [phase, setPhaseState] = useState<Phase>("briefing");
@@ -38,6 +48,8 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
   const timers = useRef<number[]>([]);
   const listenTimer = useRef<number | null>(null);
   const pressStartedAt = useRef<number | null>(null);
+  const captionScroll = useRef<HTMLDivElement>(null);
+  const [scrollState, setScrollState] = useState<ScrollState>("none");
 
   const totalTurns = segments.length;
   const turn = segments[Math.min(turnIndex, totalTurns - 1)];
@@ -80,6 +92,22 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
 
     return () => controller.abort();
   }, [turnIndex, segments]);
+
+  const measureScroll = useCallback(() => {
+    const box = captionScroll.current;
+    if (!box) return;
+    const hidden = box.scrollHeight - box.clientHeight;
+    setScrollState(hidden <= 2 ? "none" : hidden - box.scrollTop > 2 ? "more" : "end");
+  }, []);
+
+  // Re-measure when the screen resizes (rotation, keyboard, window); new text re-measures itself.
+  useEffect(() => {
+    const box = captionScroll.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measureScroll);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [measureScroll]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -198,19 +226,32 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
             <SegmentIcon kind={turn.kind} className="h-5 w-5" strokeWidth={2.5} />
             {turn.topic}
           </p>
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={captionKey}
-              className="radio-caption"
-              data-size={phase === "briefing" ? "brief" : undefined}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.26 }}
+          {/* Long text scrolls inside the screen instead of running off it. */}
+          <div
+            ref={captionScroll}
+            className="radio-scroll"
+            data-scroll={scrollState}
+            tabIndex={scrollState === "none" ? undefined : 0}
+            onScroll={measureScroll}
+          >
+            <AnimatePresence
+              mode="wait"
+              onExitComplete={() => captionScroll.current?.scrollTo({ top: 0 })}
             >
-              {caption}
-            </motion.p>
-          </AnimatePresence>
+              <motion.p
+                key={captionKey}
+                className="radio-caption"
+                data-size={captionSize(caption)}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.26 }}
+                onAnimationComplete={measureScroll}
+              >
+                {caption}
+              </motion.p>
+            </AnimatePresence>
+          </div>
           <Waveform
             bars={9}
             active={phase === "briefing" || phase === "speaking" || phase === "listening"}

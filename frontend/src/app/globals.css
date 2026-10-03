@@ -726,9 +726,32 @@ a {
 .radio-screen[data-phase="heard"] {
   color: var(--paper);
 }
-.radio-caption {
+/* Holds the caption. It is as tall as the text when that fits (so the screen stays centered),
+   and otherwise shrinks to the space left and scrolls. The padding gives the glow and the
+   entrance slide room; the negative margin cancels it so spacing is unchanged. */
+.radio-scroll {
   position: relative;
   z-index: 1;
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin-block: -1rem;
+  padding: 1rem 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: currentColor transparent;
+}
+/* fade the last line while there is more to read below */
+.radio-scroll[data-scroll="more"] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent);
+}
+.radio-scroll:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: -3px;
+  border-radius: 0.6rem;
+}
+.radio-caption {
   margin: 0;
   max-width: 100%;
   font-family: var(--ff-head);
@@ -739,12 +762,17 @@ a {
   line-height: 1.15;
   letter-spacing: -0.01em;
   text-wrap: balance;
+  overflow-wrap: anywhere;
   text-shadow: 0 0 18px currentColor;
 }
-/* a brief is longer than a question, so it reads a size down */
-.radio-caption[data-size="brief"] {
+/* longer text reads a size down; anything longer still scrolls */
+.radio-caption[data-size="medium"] {
   font-size: clamp(1.5rem, 6.2vw, 1.85rem);
   line-height: 1.25;
+}
+.radio-caption[data-size="small"] {
+  font-size: clamp(1.25rem, 5vw, 1.5rem);
+  line-height: 1.3;
 }
 /* which segment is on air */
 .radio-topic {
