@@ -12,6 +12,7 @@ import {
   MIN_HOLD_MS,
   RECEIVE_MS,
 } from "@/data/checkInScript";
+import type { AnswerTiming } from "@/data/learning";
 import { prefetchClip, speak, wait } from "@/lib/radioVoice";
 
 /**
@@ -28,6 +29,8 @@ type Phase = "briefing" | "speaking" | "ready" | "listening" | "heard";
 
 type ActiveScreenProps = {
   segments: BriefingSegment[];
+  /** Called each time the listener finishes an answer, with how they went about it. */
+  onAnswer: (segment: BriefingSegment, timing: AnswerTiming) => void;
   onComplete: () => void;
 };
 
@@ -41,13 +44,16 @@ function captionSize(text: string): "large" | "medium" | "small" {
 /** Whether the caption overflows its box, and if so whether there's more below. */
 type ScrollState = "none" | "more" | "end";
 
-export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
+export function ActiveScreen({ segments, onAnswer, onComplete }: ActiveScreenProps) {
   const [turnIndex, setTurnIndex] = useState(0);
   const [phase, setPhaseState] = useState<Phase>("briefing");
   const phaseRef = useRef<Phase>("briefing");
   const timers = useRef<number[]>([]);
   const listenTimer = useRef<number | null>(null);
   const pressStartedAt = useRef<number | null>(null);
+  // when the question finished, and when they started talking: how they answered is what the radio learns from
+  const askedAt = useRef(0);
+  const listeningSince = useRef(0);
   const captionScroll = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState<ScrollState>("none");
 
@@ -87,6 +93,7 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
       setPhase("speaking");
       await Promise.all([speak(segment.question, signal), wait(RECEIVE_MS, signal)]);
       if (signal.aborted) return;
+      askedAt.current = Date.now();
       setPhase("ready");
     })();
 
@@ -125,6 +132,10 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
     }
     pressStartedAt.current = null;
     setPhase("heard");
+    onAnswer(turn, {
+      latencyMs: listeningSince.current - askedAt.current,
+      talkedMs: Date.now() - listeningSince.current,
+    });
 
     const next = turnIndex + 1;
     later(() => {
@@ -139,6 +150,7 @@ export function ActiveScreen({ segments, onComplete }: ActiveScreenProps) {
 
   const startListening = () => {
     if (phaseRef.current !== "ready") return;
+    listeningSince.current = Date.now();
     setPhase("listening");
     // The mock sends itself after a moment, like a voice assistant noticing you've stopped.
     listenTimer.current = window.setTimeout(finish, LISTEN_MS);

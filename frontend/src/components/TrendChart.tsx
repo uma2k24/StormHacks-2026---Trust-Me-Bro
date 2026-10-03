@@ -6,6 +6,7 @@ import {
   ReferenceArea,
   ResponsiveContainer,
   XAxis,
+  type XAxisTickContentProps,
   YAxis,
 } from "recharts";
 import { Window } from "@/components/Window";
@@ -16,13 +17,29 @@ type TrendChartProps = {
 };
 
 const INK = "#0F2E33";
+const START_LABEL = "2 weeks ago";
+const AXIS_FONT_REM = 1.05;
+/** Rough width of one bold display-font character, in ems. */
+const CHAR_EM = 0.6;
 
 type DotProps = { cx?: number; cy?: number; index?: number };
+
+/** Pixels in one rem right now: the text-size setting changes the root font size. */
+function remPx(): number {
+  if (typeof document === "undefined") return 16;
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+}
 
 export function TrendChart({ data }: TrendChartProps) {
   const last = data.length - 1;
   const first = data[0];
   const today = data[last];
+  const axisFontPx = AXIS_FONT_REM * remPx();
+  // room for "100" at the current text size, so the biggest setting doesn't clip it
+  const yAxisWidth = Math.ceil(3 * CHAR_EM * axisFontPx) + 6;
+  // A numeric x-axis (day 0 ... day 13) so the plot can be a little wider than the data:
+  // the dots and zone bands then sit inside the axes instead of on them.
+  const series = data.map((point, index) => ({ ...point, index }));
 
   const renderDot = ({ cx, cy, index }: DotProps) => {
     if (cx === undefined || cy === undefined) return <g key={index} />;
@@ -67,6 +84,30 @@ export function TrendChart({ data }: TrendChartProps) {
     );
   };
 
+  // Only the two ends are labelled (the title says 14 days), each tucked inside the plot so
+  // they can't run off the edge. On a narrow screen at a big text size there isn't room for
+  // both, so the start label gives way and "Today" stays.
+  const renderXTick = ({ x, y, width, payload }: XAxisTickContentProps) => {
+    const isToday = payload.value === last;
+    const bothFit =
+      (START_LABEL.length + today.day.length + 2) * CHAR_EM * axisFontPx <= Number(width);
+    if (!isToday && !bothFit) return <g />;
+    return (
+      <text
+        x={x}
+        y={y}
+        dy="0.71em"
+        textAnchor={isToday ? "end" : "start"}
+        fill={INK}
+        fontSize={`${AXIS_FONT_REM}rem`}
+        fontWeight={800}
+        fontFamily="var(--ff-head)"
+      >
+        {isToday ? today.day : START_LABEL}
+      </text>
+    );
+  };
+
   return (
     <Window title="Readiness Over 14 Days">
       <p className="m-0 text-[1.15rem] text-[var(--ink-soft)]">
@@ -79,17 +120,20 @@ export function TrendChart({ data }: TrendChartProps) {
         aria-label={`Line chart of your readiness over 14 days. It started at ${first.score} and today is ${today.score}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 22, right: 34, left: 0, bottom: 4 }}>
+          <LineChart data={series} margin={{ top: 22, right: 20, left: 0, bottom: 4 }}>
             {/* the same three zones as the gauge, kept very light */}
             <ReferenceArea y1={50} y2={60} fill="#FF9873" fillOpacity={0.4} />
             <ReferenceArea y1={60} y2={80} fill="#FFC6B2" fillOpacity={0.55} />
             <ReferenceArea y1={80} y2={100} fill="#41CBBC" fillOpacity={0.3} />
             <XAxis
-              dataKey="day"
-              ticks={[first.day, "7", "Thu", today.day]}
+              type="number"
+              dataKey="index"
+              domain={[-0.5, last + 0.6]}
+              ticks={[0, last]}
+              interval={0}
               tickLine={false}
               axisLine={{ stroke: INK, strokeWidth: 2.5 }}
-              tick={{ fill: INK, fontSize: "1.05rem", fontWeight: 800, fontFamily: "var(--ff-head)" }}
+              tick={renderXTick}
               tickMargin={8}
             />
             <YAxis
@@ -97,8 +141,8 @@ export function TrendChart({ data }: TrendChartProps) {
               ticks={[60, 80, 100]}
               tickLine={false}
               axisLine={{ stroke: INK, strokeWidth: 2.5 }}
-              tick={{ fill: INK, fontSize: "1.05rem", fontWeight: 800, fontFamily: "var(--ff-head)" }}
-              width={44}
+              tick={{ fill: INK, fontSize: `${AXIS_FONT_REM}rem`, fontWeight: 800, fontFamily: "var(--ff-head)" }}
+              width={yAxisWidth}
             />
             <Line
               type="monotone"

@@ -4,8 +4,9 @@
  * opinion. Their answers are the conversational audio the screening needs.
  *
  * Live segments come from /api/briefing (Gemini + Google Search, weather from Open-Meteo, shaped
- * by the listener's profile) and are read aloud by ElevenLabs via /api/briefing/speech. Without
- * API keys the mock show below plays.
+ * by the listener's profile) and are read aloud by ElevenLabs via /api/briefing/speech. Which two
+ * interests the show covers is decided on the device from what the listener has responded to
+ * (learning.ts), so Gemini only writes the words. Without API keys the mock show below plays.
  * Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
  */
 
@@ -86,18 +87,30 @@ const MOCK_LINES: Record<InterestId, MockLine> = {
 };
 
 /** When someone picks fewer than two interests, the show fills up with these. */
-const MOCK_FILLERS: InterestId[] = ["local", "history", "nature"];
+const FILLER_INTERESTS: InterestId[] = ["local", "history", "nature"];
 
 /**
- * The mock show: the weather, then two segments from the listener's interests (their first two
- * picks, topped up from MOCK_FILLERS). Mirrored in CheckInScript.mockBriefing(for:) on iOS.
+ * The two interests for a show nobody has chosen picks for (see chooseInterests in learning.ts
+ * for how they are normally chosen): their first two, topped up from FILLER_INTERESTS. Used by
+ * the mock show and by the server when a request names no picks.
+ * Mirrored in CheckInScript.fallbackPicks(for:) on iOS.
  */
-export function mockBriefingFor(profile: Pick<Profile, "name" | "city" | "interests">): Briefing {
+export function fallbackPicks(profile: Pick<Profile, "interests">): InterestId[] {
   const picks = profile.interests.slice(0, 2);
-  for (const filler of MOCK_FILLERS) {
+  for (const filler of FILLER_INTERESTS) {
     if (picks.length < 2 && !picks.includes(filler)) picks.push(filler);
   }
+  return picks;
+}
 
+/**
+ * The mock show: the weather, then a segment for each of the two picks.
+ * Mirrored in CheckInScript.mockBriefing(for:picks:) on iOS.
+ */
+export function mockBriefingFor(
+  profile: Pick<Profile, "name" | "city" | "interests">,
+  picks: InterestId[] = fallbackPicks(profile),
+): Briefing {
   const name = profile.name || "friend";
   const place = profile.city ? ` in ${profile.city.split(",")[0].trim()}` : "";
 

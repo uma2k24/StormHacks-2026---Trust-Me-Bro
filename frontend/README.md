@@ -23,10 +23,19 @@ Open [http://localhost:3000](http://localhost:3000). Demo links: `/?screen=signu
 
 The check-in is tied to a habit: it plays as a personal morning radio show. Each segment reads a short, useful brief and then asks for the listener's opinion ("It's going to rain all afternoon in Coquitlam. Do you think you'll still get your walk in?"). Answering naturally gives the ~30 seconds of conversational audio the screening needs.
 
-- `GET /api/briefing?name=David&city=Coquitlam,%20BC&interests=sports,garden&extras=tulips` — today's show as JSON, built for that listener. Open-Meteo finds their town and its weather (no key); Gemini writes the weather segment plus one for each of two of their interests, using Google Search grounding for anything recent. Cached for 30 minutes per profile. `BRIEFING_CITY` / `_LAT` / `_LON` / `_TIMEZONE` are only the fallback for a listener who gave no town.
+- `GET /api/briefing?name=David&city=Coquitlam,%20BC&interests=sports,garden&extras=tulips&picks=garden,music` — today's show as JSON, built for that listener. Open-Meteo finds their town and its weather (no key); Gemini writes the weather segment plus one for each of the two `picks` (without `picks`, the listener's first two interests). One request is one Gemini call, and Google Search grounding is only switched on when a pick is `sports` or `local`. Cached for 30 minutes per name, town, picks and extras. `BRIEFING_CITY` / `_LAT` / `_LON` / `_TIMEZONE` are only the fallback for a listener who gave no town.
 - `POST /api/briefing/speech` `{ "text": "..." }` — one line read aloud by ElevenLabs (`audio/mpeg`).
 
 Copy `.env.example` to `.env.local` and add `GEMINI_API_KEY` and `ELEVENLABS_API_KEY`. Without them everything still works: the built-in mock show plays and each line stays on screen for its reading time. The microphone is still simulated.
+
+### The radio learns what you like
+
+The more someone listens, the better the show fits them, and none of it costs Gemini tokens. `src/data/learning.ts` runs on the device:
+
+- **What it watches:** how promptly the listener presses Talk and how long they keep talking on each answer, measured against how *they* usually answer (so a quiet person isn't read as bored). The mic is still simulated, so this is timing and not words; real transcripts could later add word count to `AnswerTiming`.
+- **What it changes:** which two interests today's show covers. Ticking an interest in Settings is the foundation; behaviour tilts the odds. One they light up about comes up more, one they never respond to comes up less, and one they never ticked but clearly enjoy (two answers well above their usual) joins the regulars. Unticked interests are shown rarely (`EXPLORE`), so an unticked favourite is discovered slowly on purpose. Evidence halves every 45 days, so tastes can change.
+- **Gemini budget:** learning itself makes no calls. The app picks the two interests, so Gemini only writes the words and the prompt is smaller. Today's show is saved on the device (`voice-readiness:today`) with the choice behind it, so the app asks for at most one show per listener per day, however often it is opened or however much is learned in between (a new choice would mean a new call). Editing the profile asks again.
+- **Stored on the device only:** `voice-readiness:learned` and `voice-readiness:today` in localStorage. Demo links (`?screen=…` with no sign-up) learn nothing.
 
 ## Design: "Teal Desktop"
 
@@ -38,7 +47,7 @@ A 90s-desktop look rebuilt for large, legible, high-contrast use, in **one colou
 - **Text size:** text is big by default (125%). "Big", "Bigger" and "Biggest" in the sign-up flow and in Settings scale every size on the page (all sizes are `rem`). The choice is remembered.
 - **Targets and focus:** primary buttons are 64px or taller; one thick ink focus ring everywhere.
 - **Motion:** the readiness needle swings in, the score counts up, the Talk button breathes sonar rings, the headline name gets a highlighter swipe. All of it stops under `prefers-reduced-motion`.
-- **Tokens:** colours, type and motion live in `src/app/globals.css`; reusable pieces are `Window`, `StatusChip`, `AppBar` and `Confetti` in `src/components/`. The profile, interests and text sizes are in `src/data/profile.ts`; the mock show (which follows the listener's interests) and timings for the radio are in `src/data/checkInScript.ts`; the server side is `src/lib/briefing.ts` and the radio's voice is `src/lib/radioVoice.ts`.
+- **Tokens:** colours, type and motion live in `src/app/globals.css`; reusable pieces are `Window`, `StatusChip`, `AppBar` and `Confetti` in `src/components/`. The profile, interests and text sizes are in `src/data/profile.ts`; the mock show (which follows the picks) and timings for the radio are in `src/data/checkInScript.ts`; what the radio has learned about the listener and how it chooses the show is in `src/data/learning.ts`; the server side is `src/lib/briefing.ts` and the radio's voice is `src/lib/radioVoice.ts`.
 
 ## UI flow
 
