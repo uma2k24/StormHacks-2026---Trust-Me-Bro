@@ -136,12 +136,14 @@ export function mockBriefingFor(
 
 // ---- enough voice for the classifier -------------------------------------------------------------
 
-// The classifier listens to four seconds at a time (see lib/voice/analysis.ts). So that it has a
-// couple of windows to go on, the show keeps asking questions until about this much talking has been
-// heard, and always ends with the sustained "ahhh", which the jitter / shimmer / HNR are measured on.
+// The classifier listens to four seconds at a time (see lib/voice/analysis.ts). So that it has plenty
+// to go on, the show keeps asking questions until at least this much talking has been heard (counting
+// every answer, from each answer's own recording, but not the "ahhh"), and always ends with the
+// sustained "ahhh", which the jitter / shimmer / HNR are measured on. Every answer that was kept is
+// sent to the classifier; the silences between are cut out there.
 // Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
-export const MIN_SPEECH_MS = 9000; // talking across the show, pauses not counted (a little over two windows' worth: the count is generous)
-export const MAX_EXTRA_QUESTIONS = 4; // asked at most, so a quiet listener isn't kept for ever
+export const MIN_SPEECH_MS = 30000; // talking across the show, pauses not counted
+export const MAX_EXTRA_QUESTIONS = 6; // asked at most, so a quiet listener isn't kept for ever
 export const VOWEL_TARGET_MS = 8000; // the "ahhh" stops by itself once it has been held this long
 export const VOWEL_MIN_MS = 4000; // a shorter "ahhh" than this is asked for once more
 export const VOWEL_TRIES = 2;
@@ -166,9 +168,19 @@ const EXTRA_LINES: ExtraLine[] = [
     mockReply: "I worked in a bakery. I still remember the smell of the bread at five in the morning.",
   },
   {
-    brief: "One more, if you don't mind.",
+    brief: "Now for something tasty.",
     question: "What's a meal you could happily eat again and again?",
     mockReply: "My mother's chicken and dumplings. Nobody has ever made them quite the same.",
+  },
+  {
+    brief: "Music can take us right back.",
+    question: "Is there a song you remember from when you were young? Tell me what it brings to mind.",
+    mockReply: "An old dance tune we all knew by heart. I can still see the whole hall singing along.",
+  },
+  {
+    brief: "One more, if you don't mind.",
+    question: "Tell me about a celebration you remember fondly, and who was there.",
+    mockReply: "Our fortieth anniversary. The whole family came, and my sister made a cake far too big.",
   },
 ];
 

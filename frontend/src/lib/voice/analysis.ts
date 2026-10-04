@@ -22,8 +22,12 @@ const TASK_WEIGHTS: Record<VoiceTaskId, number> = { vowel: 0.35, speech: 0.5 };
 
 /** Shorter than a window but at least this long is looped to fill one, so a short answer still gets a number. */
 const MIN_LOOPED_SECONDS = 2;
-/** Windows per task are capped, evenly spread, so a long ramble costs no more than a short answer. */
-const MAX_WINDOWS = 24;
+/**
+ * Windows per task are capped, evenly spread, so a long ramble costs a bounded amount. The cap
+ * covers about 98 s of voice with no gaps (a show asks for 30 s or more, and 48 windows take well
+ * under a second), so every answer the listener gave is heard in full.
+ */
+const MAX_WINDOWS = 48;
 const HOP_SECONDS: Record<VoiceTaskId, number> = { speech: 2, vowel: 1 };
 
 // ---------- cutting the silences out ----------------------------------------

@@ -294,22 +294,24 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     if (!signal.aborted) onComplete(captured.current);
   };
 
+  /**
+   * Another plain question, when less than MIN_SPEECH_MS of talking has been heard so far (and they
+   * haven't left the last one unanswered); null when there's enough, or no more questions to ask.
+   */
+  const moreToSay = () => {
+    if (gaveUp.current || talkedMs.current >= MIN_SPEECH_MS || extrasAsked.current >= MAX_EXTRA_QUESTIONS) return null;
+    const extra = extraTurn(extrasAsked.current, profile.name);
+    if (extra) extrasAsked.current += 1;
+    return extra;
+  };
+
   /** Moves to the next turn, which may have to be made up: another question, or the "ahhh". */
   const advance = () => {
     const next = turnIndex + 1;
     if (next >= turnsRef.current.length) {
-      const needMore =
-        turn.kind !== "vowel" &&
-        !sample.current &&
-        !gaveUp.current &&
-        talkedMs.current < MIN_SPEECH_MS &&
-        extrasAsked.current < MAX_EXTRA_QUESTIONS;
+      // with no microphone there is nothing to measure, so no "ahhh"
       const following =
-        turn.kind === "vowel" || sample.current // with no microphone there is nothing to measure, so no "ahhh"
-          ? null
-          : needMore
-            ? extraTurn(extrasAsked.current++, profile.name)
-            : vowelTurn(profile.name);
+        turn.kind === "vowel" || sample.current ? null : (moreToSay() ?? vowelTurn(profile.name));
       if (!following) {
         void closeShow();
         return;

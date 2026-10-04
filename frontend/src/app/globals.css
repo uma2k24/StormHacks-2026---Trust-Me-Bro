@@ -217,17 +217,21 @@ a {
   flex-direction: column;
   gap: 0.6rem;
 }
+/* Big enough that the two-line "Play again" has room to breathe inside the rim: a circle is much
+   narrower than its box at the height of the bottom line of text. */
 .knobs-side .orb.orb-sm {
-  width: clamp(4.4rem, min(22vw, 10dvh), 5.5rem);
-  height: clamp(4.4rem, min(22vw, 10dvh), 5.5rem);
+  width: clamp(5rem, min(25vw, 11dvh), 6.25rem);
+  height: clamp(5rem, min(25vw, 11dvh), 6.25rem);
+  gap: 0.1rem;
   box-shadow: 4px 4px 0 var(--ink);
 }
 .knobs-side .orb-sm svg {
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.3rem;
+  height: 1.3rem;
 }
 .knobs-side .orb-sm-label {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1;
 }
 /* the label stays well inside the rim: a circle is narrower than its box at text height */
 .orb-day-title {
