@@ -1,0 +1,33 @@
+{
+  "name": "v1-italian-clinic",
+  "saved": "2026-10-04",
+  "git_commit": "2cde791",
+  "git_branch": "data_training",
+  "status": "working snapshot, verified on microphone input",
+  "sha256_onnx": "BB9EDD22AC38F39BEBD895559ADCDD67C18AF14685B2773BC27873568EDD3583",
+  "decision_threshold": 0.6458601629247063,
+  "input": {
+    "sample_rate": 16000,
+    "window_samples": 64000,
+    "format": "mono float32 waveform in [-1, 1]",
+    "eval_hop_seconds": 2.0,
+    "aggregation": "mean probability over voice-gated 4 s windows"
+  },
+  "training_data": "Italian Parkinson's Voice and Speech only (clinic microphone, 61 speakers)",
+  "architecture": "5-fold ensemble of PDNet over a fixed log-mel front end",
+  "metrics": {
+    "italian_held_out_subject_auc": 0.9977,
+    "italian_held_out_accuracy": 0.9836,
+    "external_mdvr_kcl_subject_auc": 0.7898,
+    "external_mdvr_kcl_sensitivity": 0.375,
+    "external_mdvr_kcl_specificity": 1.0,
+    "librispeech_false_positive_rate": 0.1538
+  },
+  "known_limitations": [
+    "Trained on one clinic microphone; on English smartphone recordings it flags only 6 of 16 people with Parkinson's.",
+    "High specificity, low sensitivity off-domain: a 'not flagged' result on an unfamiliar microphone is weak evidence.",
+    "Screening demo only. Not a diagnosis and not a medical device."
+  ],
+  "superseded_by": null
+}
+

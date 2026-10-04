@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Readiness &middot; Parkinson's voice screening</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Voice check-in</h1>
+        <p class="sub">
+          Three short speaking tasks. A 4-second-window CNN scores each one and returns the
+          probability that the voice shows Parkinsonian speech patterns.
+        </p>
+        <p class="disclaimer">Research demo. Not a diagnosis and not a medical device.</p>
+      </header>
+
+      <section id="permission" class="card">
+        <h2>Microphone</h2>
+        <p id="mic-status">Click below and allow microphone access to begin.</p>
+        <button id="enable-mic" class="primary">Enable microphone</button>
+      </section>
+
+      <section id="check-in" class="card hidden">
+        <div class="task-head">
+          <span id="task-counter" class="pill">Task 1 of 3</span>
+          <h2 id="task-title">Sustained vowel</h2>
+        </div>
+        <p id="task-prompt" class="prompt"></p>
+        <p id="task-hint" class="hint"></p>
+
+        <div class="meter"><div id="meter-fill"></div></div>
+        <div class="controls">
+          <button id="record" class="primary">Start recording</button>
+          <span id="countdown" class="countdown"></span>
+        </div>
+        <ol id="task-results" class="task-results"></ol>
+      </section>
+
+      <section id="result" class="card hidden">
+        <h2>Result</h2>
+        <div id="verdict" class="verdict"></div>
+        <div class="gauge"><div id="gauge-fill"></div><div id="gauge-mark" class="mark"></div></div>
+        <p id="score-line" class="score-line"></p>
+        <div id="breakdown" class="breakdown"></div>
+        <p id="validation" class="validation"></p>
+        <button id="restart" class="secondary">Run another check-in</button>
+      </section>
+
+      <section class="card">
+        <h2>Score a recording file</h2>
+        <p class="hint">
+          Drop in a <code>.wav</code> or <code>.flac</code> clip &mdash; for example a file from the
+          Italian Parkinson's dataset &mdash; to compare against a live recording.
+        </p>
+        <input id="file-input" type="file" accept="audio/*" multiple />
+        <ol id="file-results" class="task-results"></ol>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

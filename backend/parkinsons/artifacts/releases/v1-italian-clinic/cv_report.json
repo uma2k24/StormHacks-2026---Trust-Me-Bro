@@ -1,0 +1,85 @@
+{
+  "threshold": 0.6458601629247063,
+  "subject_level": {
+    "at_0.5": {
+      "n": 61,
+      "auc": 0.9977477477477478,
+      "accuracy": 0.9508196721311475,
+      "sensitivity": 0.9583333333333334,
+      "specificity": 0.9459459459459459
+    },
+    "at_chosen_threshold": {
+      "n": 61,
+      "auc": 0.9977477477477478,
+      "accuracy": 0.9836065573770492,
+      "sensitivity": 0.9583333333333334,
+      "specificity": 1.0
+    },
+    "elderly_hc_vs_pd": {
+      "n": 46,
+      "auc": 0.9962121212121212,
+      "accuracy": 0.9782608695652174,
+      "sensitivity": 0.9583333333333334,
+      "specificity": 1.0
+    }
+  },
+  "recording_level": {
+    "all": {
+      "n": 831,
+      "auc": 0.975083924775523,
+      "accuracy": 0.924187725631769,
+      "sensitivity": 0.9153318077803204,
+      "specificity": 0.934010152284264
+    },
+    "vowel": {
+      "n": 495,
+      "auc": 0.9494380165289256,
+      "accuracy": 0.8909090909090909,
+      "sensitivity": 0.88,
+      "specificity": 0.9045454545454545
+    },
+    "ddk": {
+      "n": 100,
+      "auc": 0.9902597402597403,
+      "accuracy": 0.93,
+      "sensitivity": 0.9642857142857143,
+      "specificity": 0.8863636363636364
+    },
+    "speech": {
+      "n": 236,
+      "auc": 0.9998548621190131,
+      "accuracy": 0.9915254237288136,
+      "sensitivity": 0.9811320754716981,
+      "specificity": 1.0
+    },
+    "speech_elderly_hc_vs_pd": {
+      "n": 191,
+      "auc": 1.0,
+      "accuracy": 0.9895287958115183,
+      "sensitivity": 0.9811320754716981,
+      "specificity": 1.0
+    },
+    "pd_recall_orig_16000hz": 0.9494584837545126,
+    "pd_recall_orig_44100hz": 0.85625
+  },
+  "window_level": {
+    "single_4s_window": {
+      "n": 5971,
+      "auc": 0.9792158621690433,
+      "accuracy": 0.9330095461396751,
+      "sensitivity": 0.929518757104964,
+      "specificity": 0.9357743097238895
+    }
+  },
+  "baseline_mfcc_logreg": {
+    "subject_level_auc": 0.9076576576576577,
+    "recording_level_auc": 0.9008351821951701
+  },
+  "misclassified_subjects": [
+    {
+      "subject": "PD:felicetta c",
+      "group": "PD",
+      "prob": 0.364
+    }
+  ]
+}

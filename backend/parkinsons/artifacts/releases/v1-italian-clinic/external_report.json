@@ -1,0 +1,362 @@
+{
+  "threshold": 0.6458601629247063,
+  "mdvr_kcl": {
+    "subject_level": {
+      "n": 38,
+      "auc": 0.7897727272727273,
+      "accuracy": 0.7368421052631579,
+      "sensitivity": 0.375,
+      "specificity": 1.0
+    },
+    "ReadText": {
+      "n": 37,
+      "auc": 0.7767857142857143,
+      "accuracy": 0.6756756756756757,
+      "sensitivity": 0.25,
+      "specificity": 1.0
+    },
+    "SpontaneousDialogue": {
+      "n": 36,
+      "auc": 0.7841269841269842,
+      "accuracy": 0.6944444444444444,
+      "sensitivity": 0.4,
+      "specificity": 0.9047619047619048
+    }
+  },
+  "librispeech": {
+    "n_speakers": 26,
+    "false_positive_rate": 0.15384615384615385,
+    "mean_prob": 0.39747697011700467,
+    "median_prob": 0.34968455660023856,
+    "max_prob": 0.9092037184485073
+  },
+  "pooled_english": {
+    "n": 64,
+    "auc": 0.7330729166666666,
+    "accuracy": 0.78125,
+    "sensitivity": 0.375,
+    "specificity": 0.9166666666666666
+  },
+  "subject_scores": [
+    {
+      "subject": "ID33",
+      "label": 1,
+      "prob": 0.918
+    },
+    {
+      "subject": "libri-2803",
+      "label": 0,
+      "prob": 0.909
+    },
+    {
+      "subject": "ID27",
+      "label": 1,
+      "prob": 0.817
+    },
+    {
+      "subject": "ID06",
+      "label": 1,
+      "prob": 0.786
+    },
+    {
+      "subject": "libri-2412",
+      "label": 0,
+      "prob": 0.78
+    },
+    {
+      "subject": "ID20",
+      "label": 1,
+      "prob": 0.767
+    },
+    {
+      "subject": "libri-5694",
+      "label": 0,
+      "prob": 0.732
+    },
+    {
+      "subject": "ID02",
+      "label": 1,
+      "prob": 0.691
+    },
+    {
+      "subject": "ID32",
+      "label": 1,
+      "prob": 0.677
+    },
+    {
+      "subject": "libri-1988",
+      "label": 0,
+      "prob": 0.676
+    },
+    {
+      "subject": "libri-8297",
+      "label": 0,
+      "prob": 0.638
+    },
+    {
+      "subject": "ID35",
+      "label": 0,
+      "prob": 0.616
+    },
+    {
+      "subject": "libri-6241",
+      "label": 0,
+      "prob": 0.598
+    },
+    {
+      "subject": "libri-6295",
+      "label": 0,
+      "prob": 0.575
+    },
+    {
+      "subject": "libri-1462",
+      "label": 0,
+      "prob": 0.572
+    },
+    {
+      "subject": "ID23",
+      "label": 0,
+      "prob": 0.562
+    },
+    {
+      "subject": "ID13",
+      "label": 1,
+      "prob": 0.55
+    },
+    {
+      "subject": "ID29",
+      "label": 1,
+      "prob": 0.547
+    },
+    {
+      "subject": "ID18",
+      "label": 1,
+      "prob": 0.5
+    },
+    {
+      "subject": "ID31",
+      "label": 0,
+      "prob": 0.495
+    },
+    {
+      "subject": "libri-84",
+      "label": 0,
+      "prob": 0.464
+    },
+    {
+      "subject": "libri-1272",
+      "label": 0,
+      "prob": 0.455
+    },
+    {
+      "subject": "ID04",
+      "label": 1,
+      "prob": 0.448
+    },
+    {
+      "subject": "ID03",
+      "label": 0,
+      "prob": 0.415
+    },
+    {
+      "subject": "ID10",
+      "label": 0,
+      "prob": 0.409
+    },
+    {
+      "subject": "ID12",
+      "label": 0,
+      "prob": 0.409
+    },
+    {
+      "subject": "ID22hc",
+      "label": 0,
+      "prob": 0.4
+    },
+    {
+      "subject": "libri-5895",
+      "label": 0,
+      "prob": 0.394
+    },
+    {
+      "subject": "ID16",
+      "label": 1,
+      "prob": 0.391
+    },
+    {
+      "subject": "ID30",
+      "label": 1,
+      "prob": 0.373
+    },
+    {
+      "subject": "libri-3752",
+      "label": 0,
+      "prob": 0.364
+    },
+    {
+      "subject": "libri-174",
+      "label": 0,
+      "prob": 0.357
+    },
+    {
+      "subject": "ID05",
+      "label": 0,
+      "prob": 0.352
+    },
+    {
+      "subject": "ID22",
+      "label": 0,
+      "prob": 0.349
+    },
+    {
+      "subject": "ID24",
+      "label": 1,
+      "prob": 0.349
+    },
+    {
+      "subject": "ID08",
+      "label": 0,
+      "prob": 0.346
+    },
+    {
+      "subject": "libri-6319",
+      "label": 0,
+      "prob": 0.342
+    },
+    {
+      "subject": "ID17",
+      "label": 1,
+      "prob": 0.334
+    },
+    {
+      "subject": "ID25",
+      "label": 0,
+      "prob": 0.304
+    },
+    {
+      "subject": "ID26",
+      "label": 0,
+      "prob": 0.304
+    },
+    {
+      "subject": "ID07",
+      "label": 1,
+      "prob": 0.286
+    },
+    {
+      "subject": "ID15",
+      "label": 0,
+      "prob": 0.284
+    },
+    {
+      "subject": "libri-251",
+      "label": 0,
+      "prob": 0.267
+    },
+    {
+      "subject": "libri-5338",
+      "label": 0,
+      "prob": 0.264
+    },
+    {
+      "subject": "libri-3000",
+      "label": 0,
+      "prob": 0.254
+    },
+    {
+      "subject": "ID36",
+      "label": 0,
+      "prob": 0.24
+    },
+    {
+      "subject": "libri-777",
+      "label": 0,
+      "prob": 0.228
+    },
+    {
+      "subject": "ID01",
+      "label": 0,
+      "prob": 0.224
+    },
+    {
+      "subject": "ID14",
+      "label": 0,
+      "prob": 0.212
+    },
+    {
+      "subject": "libri-2035",
+      "label": 0,
+      "prob": 0.207
+    },
+    {
+      "subject": "ID09",
+      "label": 0,
+      "prob": 0.204
+    },
+    {
+      "subject": "ID00",
+      "label": 0,
+      "prob": 0.203
+    },
+    {
+      "subject": "libri-2428",
+      "label": 0,
+      "prob": 0.197
+    },
+    {
+      "subject": "ID28",
+      "label": 0,
+      "prob": 0.195
+    },
+    {
+      "subject": "libri-7850",
+      "label": 0,
+      "prob": 0.193
+    },
+    {
+      "subject": "libri-7976",
+      "label": 0,
+      "prob": 0.188
+    },
+    {
+      "subject": "libri-3576",
+      "label": 0,
+      "prob": 0.185
+    },
+    {
+      "subject": "libri-3536",
+      "label": 0,
+      "prob": 0.182
+    },
+    {
+      "subject": "ID21",
+      "label": 0,
+      "prob": 0.18
+    },
+    {
+      "subject": "ID34",
+      "label": 1,
+      "prob": 0.177
+    },
+    {
+      "subject": "ID19",
+      "label": 0,
+      "prob": 0.175
+    },
+    {
+      "subject": "ID11",
+      "label": 0,
+      "prob": 0.171
+    },
+    {
+      "subject": "libri-1993",
+      "label": 0,
+      "prob": 0.161
+    },
+    {
+      "subject": "libri-8842",
+      "label": 0,
+      "prob": 0.149
+    }
+  ]
+}
