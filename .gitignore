@@ -29,7 +29,3 @@ parkinsons.zip
 backend/parkinsons/cache/
 backend/parkinsons/artifacts/cv/*.txt
 
-# Optional duplicate exports (release folder is the canonical copy)
-backend/parkinsons/artifacts/archive_italian_only.*
-backend/parkinsons/artifacts/v1_italian_only.onnx
-backend/parkinsons/artifacts/parkinson_voice_classifier.onnx
