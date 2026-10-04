@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { ListChecks, Phone, Radio, RotateCcw, Settings } from "lucide-react";
+import { ListChecks, Phone, Radio, RotateCcw, Settings, Upload } from "lucide-react";
 import { SegmentIcon } from "@/components/SegmentIcon";
 import { WeekLamps } from "@/components/WeekLamps";
 import type { BriefingSegment } from "@/data/checkInScript";
@@ -19,6 +19,8 @@ type IdleScreenProps = {
   listDone: number;
   listTotal: number;
   onStart: () => void;
+  /** Check a recording they have instead of talking to the radio. */
+  onUpload: () => void;
   onOpenToday: () => void;
   onOpenSettings: () => void;
 };
@@ -26,7 +28,8 @@ type IdleScreenProps = {
 /**
  * Home. Before the show: Play, and what's on. Once they've listened: their day's list, and the week
  * of mornings they've tuned in. Either way the bottom row is one tap from Settings and, when they've
- * added someone, from calling their family.
+ * added someone, from calling their family, and a little Upload button sits beside the big one for
+ * checking a recording instead of talking to the radio (web only).
  */
 export function IdleScreen({
   profile,
@@ -37,6 +40,7 @@ export function IdleScreen({
   listDone,
   listTotal,
   onStart,
+  onUpload,
   onOpenToday,
   onOpenSettings,
 }: IdleScreenProps) {
@@ -60,29 +64,41 @@ export function IdleScreen({
             <button
               type="button"
               onClick={onOpenToday}
-              className="orb orb-xl orb-teal"
+              className="orb orb-xl orb-teal orb-day"
               aria-label={`Your day: ${listDone} of ${listTotal} things done`}
             >
-              <ListChecks className="h-[3.2rem] w-[3.2rem]" strokeWidth={2.5} aria-hidden="true" />
-              <span className="display text-[1.8rem] leading-none">Your day</span>
+              <ListChecks className="h-[2.6rem] w-[2.6rem]" strokeWidth={2.5} aria-hidden="true" />
+              <span className="display orb-day-title">Your day</span>
               <span className="orb-note">{allDone ? "All done!" : `${listDone} of ${listTotal} done`}</span>
             </button>
           </div>
-          <button type="button" onClick={onStart} className="orb orb-sm orb-white">
-            <RotateCcw className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
-            <span className="orb-sm-label">Play again</span>
-          </button>
+          <div className="knobs-side">
+            <button type="button" onClick={onStart} className="orb orb-sm orb-white">
+              <RotateCcw className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
+              <span className="orb-sm-label">Play again</span>
+            </button>
+            <button type="button" onClick={onUpload} className="orb orb-sm orb-white" aria-label="Upload a recording instead">
+              <Upload className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
+              <span className="orb-sm-label">Upload</span>
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="sonar rounded-full">
-          <button
-            type="button"
-            onClick={onStart}
-            className="orb orb-xl"
-            aria-label="Tap to play your morning radio"
-          >
-            <Radio className="h-[4.25rem] w-[4.25rem]" strokeWidth={2.5} aria-hidden="true" />
-            <span className="display text-[2.1rem]">Play</span>
+        <div className="knobs">
+          <div className="sonar rounded-full">
+            <button
+              type="button"
+              onClick={onStart}
+              className="orb orb-xl"
+              aria-label="Tap to play your morning radio"
+            >
+              <Radio className="h-[4.25rem] w-[4.25rem]" strokeWidth={2.5} aria-hidden="true" />
+              <span className="display text-[2.1rem]">Play</span>
+            </button>
+          </div>
+          <button type="button" onClick={onUpload} className="orb orb-sm orb-white" aria-label="Upload a recording instead">
+            <Upload className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
+            <span className="orb-sm-label">Upload</span>
           </button>
         </div>
       )}

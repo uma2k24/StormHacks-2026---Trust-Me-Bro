@@ -11,6 +11,7 @@ import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { SettingsScreen } from "@/components/SettingsScreen";
 import { SignUpScreen } from "@/components/SignUpScreen";
 import { TodayScreen } from "@/components/TodayScreen";
+import { UploadScreen } from "@/components/UploadScreen";
 import { type Briefing, type BriefingSegment, mockBriefingFor } from "@/data/checkInScript";
 import { demoHistory, lastSevenDays, planForToday, streakOf, trendBefore, yesterdayScore } from "@/data/daily";
 import {
@@ -26,7 +27,7 @@ import { demoProfile, type Profile, profileKey } from "@/data/profile";
 import { readinessFrom, resultsFrom } from "@/data/voiceReading";
 import { prefetchClip, unlockRadioVoice } from "@/lib/radioVoice";
 import { primeMicrophone } from "@/lib/recorder";
-import { analyseVoice, type Captured } from "@/lib/voiceClient";
+import { analyseUpload, analyseVoice, type Captured, type Upload } from "@/lib/voiceClient";
 import {
   loadLearned,
   loadTodaysShow,
@@ -45,7 +46,7 @@ import type { VoiceAnalysis } from "@/types/voice";
 
 type Launch = { screen: AppScreen; step: number; demo: boolean };
 
-/** Demo links: ?screen=signup|settings|idle|recording|processing|results|today (and ?step=0-10 for sign-up). */
+/** Demo links: ?screen=signup|settings|idle|recording|processing|results|today|upload (and ?step=0-10 for sign-up). */
 function launchFrom(search: string): Launch {
   const params = new URLSearchParams(search);
   const value = params.get("screen");
@@ -57,10 +58,15 @@ function launchFrom(search: string): Launch {
   if (value === "processing") return { screen: "processing", step, demo };
   if (value === "results") return { screen: "results", step, demo };
   if (value === "today") return { screen: "today", step, demo };
+  if (value === "upload") return { screen: "upload", step, demo };
   return { screen: "idle", step, demo };
 }
 
 const neverChanges = () => () => {};
+
+// What the upload screen says when the voice couldn't be checked (a show that can't be measured just shows a sample).
+const UPLOAD_TOO_QUIET = "I couldn’t hear enough of a voice in that. Please try a longer or louder recording.";
+const UPLOAD_UNAVAILABLE = "I couldn’t check that just now. Please try again in a moment.";
 
 export default function Home() {
   const stored = useProfile(); // undefined until the browser has been asked
@@ -79,6 +85,8 @@ export default function Home() {
   // This morning's voice analysis: in flight while the Processing screen shows, then its answer
   const [work, setWork] = useState<Promise<void> | null>(null);
   const [analysis, setAnalysis] = useState<VoiceAnalysis | null>(null);
+  // Set when an uploaded recording couldn't be checked: Processing then goes back to Upload, not to the results.
+  const [uploadProblem, setUploadProblem] = useState<string | null>(null);
   // The day this page opened on: a tab left open overnight keeps the show it has.
   const [today] = useState(dayKey);
 
@@ -176,6 +184,7 @@ export default function Home() {
     (captured: Captured) => {
       recordCheckIn(today, mockResults.readinessScore); // today's show is done, whatever happens next
       setAnalysis(null);
+      setUploadProblem(null);
       setWork(
         analyseVoice(captured).then((outcome) => {
           if (outcome.status !== "done") return;
@@ -187,7 +196,30 @@ export default function Home() {
     },
     [today],
   );
-  const showResults = useCallback(() => setScreen("results"), []);
+  // An uploaded recording stands in for the show. Unlike a show it only counts as today's check-in
+  // once it has been measured, and a failure sends them back to choose again, not to a sample dashboard.
+  const analyseUploaded = useCallback(
+    (upload: Upload) => {
+      setUploadProblem(null);
+      setWork(
+        analyseUpload(upload).then((outcome) => {
+          if (outcome.status !== "done") {
+            setUploadProblem(outcome.status === "too-quiet" ? UPLOAD_TOO_QUIET : UPLOAD_UNAVAILABLE);
+            return;
+          }
+          setAnalysis(outcome.analysis);
+          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true);
+        }),
+      );
+      setScreen("processing");
+    },
+    [today],
+  );
+  const openUpload = useCallback(() => {
+    setUploadProblem(null);
+    setScreen("upload");
+  }, []);
+  const showResults = useCallback(() => setScreen(uploadProblem ? "upload" : "results"), [uploadProblem]);
   const goHome = useCallback(() => setScreen("idle"), []);
   const openToday = useCallback(() => setScreen("today"), []);
   const openSettings = useCallback(() => setScreen("settings"), []);
@@ -234,6 +266,7 @@ export default function Home() {
               listDone={todaysList.filter((item) => ticked.includes(item.id)).length}
               listTotal={todaysList.length}
               onStart={startCheckIn}
+              onUpload={openUpload}
               onOpenToday={openToday}
               onOpenSettings={openSettings}
             />
@@ -246,6 +279,10 @@ export default function Home() {
               onAnswer={recordAnswer}
               onComplete={finishRecording}
             />
+          ) : null}
+
+          {current === "upload" && profile ? (
+            <UploadScreen problem={uploadProblem} onAnalyse={analyseUploaded} onBack={goHome} />
           ) : null}
 
           {current === "processing" ? <ProcessingScreen work={work} onComplete={showResults} /> : null}

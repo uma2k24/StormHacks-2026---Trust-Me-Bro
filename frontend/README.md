@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Demo links: `/?screen=signup&step=0-9`, `/?screen=settings`, `/?screen=idle|recording|processing|results|today` (these skip sign-up, and borrow a lived-in week so the home screen's lamps aren't all dark).
+Open [http://localhost:3000](http://localhost:3000). Demo links: `/?screen=signup&step=0-9`, `/?screen=settings`, `/?screen=idle|recording|processing|results|today|upload` (these skip sign-up, and borrow a lived-in week so the home screen's lamps aren't all dark).
 
 ## Morning briefing (Gemini + ElevenLabs)
 
@@ -84,6 +84,7 @@ The results are measured, not mocked. The show's recordings go to `POST /api/voi
 - **Drill-down:** on the Vitals page, tapping Jitter, Shimmer or HNR opens the numbers: each measure on its scale with the healthy and Parkinson's ranges, and the classifier's probability against its threshold, with the weight of each part (`VitalDetail.tsx`). Nothing technical appears anywhere else.
 - **Long enough?** The classifier needs voice to listen to. After the briefing's segments the radio keeps asking plain questions (`extraTurn` in `src/data/checkInScript.ts`, no Gemini) until about 9 s of talking has been heard (`MIN_SPEECH_MS`), up to 4 of them, and stops asking if one goes unanswered. The **last question is always the "ahhh"**: "Take a deep breath, then say ahhh and hold it steady for about eight seconds." It stops by itself once 8 s of voice has been held, and is asked once more if it was under 4 s.
 - **Never a dead end:** with no microphone there is no "ahhh" and the dashboard shows a clearly labelled sample. With no ElevenLabs key the answers are still recorded and measured (the replies are sample lines). With no model or backend the dashboard shows the sample and the day stays out of the trend.
+- **Upload instead of talking (web only):** the little **Upload** button beside Play (and beside Play again, once today's show is done) opens `UploadScreen.tsx`, where the listener chooses audio files, or drops them on the page, instead of talking to the radio: any number of recordings of them talking (they become `speech`) and, optionally, one of them holding an "ahhh" (`vowel`, which is what fills in jitter, shimmer and HNR; without it those three say "Couldn't measure"). The files are read in the browser (`decodeAudio` in `src/lib/voiceClient.ts`: `.wav`, `.mp3`, `.m4a`, `.ogg`, `.flac`, whatever the browser can decode, downmixed and resampled to 16 kHz) and go to the same `POST /api/voice/analyze`, so the numbers match a live show's. Only the first 3 minutes of talking and the first 30 s of the "ahhh" are used (the server's limits); files over 100 MB aren't opened. A recording that can't be measured (too little voice, or no backend) returns to the upload screen with a message instead of showing the sample dashboard, and doesn't count as today's check-in; a measured one does, like a show. The iOS app has no upload on purpose.
 - The server answers `422` when there is too little voice (under 2 s), `503` when the model can't load. `next build` includes the model (`outputFileTracingIncludes` in `next.config.ts`); on a host without writable native modules, run the API somewhere that can load `onnxruntime-node`.
 
 ## UI flow

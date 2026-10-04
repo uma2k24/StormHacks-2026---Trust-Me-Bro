@@ -126,23 +126,25 @@ struct IdleView: View {
                 if !allDone { SonarRings(diameter: size) }
 
                 Button(action: onOpenToday) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 5) {
                         Image(systemName: "checklist")
-                            .font(.system(size: size * 0.22, weight: .semibold))
+                            .font(.system(size: size * 0.2, weight: .semibold))
+                        // kept well inside the rim: the circle is narrower than the box at this height
                         Text("Your day")
-                            .font(AppFont.head(29, relativeTo: .title))
-                            .minimumScaleFactor(0.7)
+                            .font(AppFont.head(25, relativeTo: .title))
+                            .minimumScaleFactor(0.6)
                             .lineLimit(1)
+                            .frame(maxWidth: size * 0.62)
                         Text(allDone ? "All done!" : "\(listDone) of \(listTotal) done")
-                            .font(AppFont.body(16, bold: true))
+                            .font(AppFont.body(14, bold: true))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .padding(.horizontal, 10)
+                            .minimumScaleFactor(0.6)
+                            .padding(.horizontal, 9)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.white))
                             .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 2.5) }
+                            .frame(maxWidth: size * 0.68)
                     }
-                    .padding(.horizontal, size * 0.12)
                 }
                 .buttonStyle(OrbButtonStyle(size: size, fill: AppTheme.teal))
                 .accessibilityLabel("Your day: \(listDone) of \(listTotal) things done")

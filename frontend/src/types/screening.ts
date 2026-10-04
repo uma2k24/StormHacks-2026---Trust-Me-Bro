@@ -1,4 +1,4 @@
-export type AppScreen = "signup" | "settings" | "idle" | "recording" | "processing" | "results" | "today";
+export type AppScreen = "signup" | "settings" | "idle" | "recording" | "processing" | "results" | "today" | "upload";
 
 export type StatusColor = "green" | "yellow" | "red";
 
