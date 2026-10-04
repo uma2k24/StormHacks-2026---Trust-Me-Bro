@@ -1,7 +1,7 @@
 import Foundation
 
 /// Talking back to the radio: sends a recorded answer to the web backend's /api/conversation/transcribe
-/// (ElevenLabs Scribe) and asks /api/conversation/reply (Gemini, with today's weather and news) for
+/// (ElevenLabs Scribe) and asks /api/conversation/reply (Gemini, with a light fun fact or news) for
 /// the host's answer to it. The keys stay on the server. Every failure is reported as "unavailable"
 /// or nil so the show carries on with a sample answer or a fixed warm line.
 /// Mirrors frontend/src/lib/conversationClient.ts.

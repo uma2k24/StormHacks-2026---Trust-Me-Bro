@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { StatusChip } from "@/components/StatusChip";
 import { Window } from "@/components/Window";
 import { readinessLabel } from "@/data/mockResults";
+import { parkinsonsIndication } from "@/data/voiceReading";
 import type { StatusColor } from "@/types/screening";
 
 type ReadinessDialProps = {
@@ -73,6 +74,7 @@ function useCountUp(target: number, durationMs = 1500, delayMs = 350) {
 export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
   const clamped = Math.min(Math.max(score, 0), 100);
   const label = readinessLabel(clamped);
+  const indication = parkinsonsIndication(clamped);
   const shown = useCountUp(clamped);
 
   return (
@@ -80,7 +82,7 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
       <div
         className="flex flex-col items-center text-center"
         role="img"
-        aria-label={`Today's readiness score ${clamped} out of 100. ${label}.`}
+        aria-label={`Today's readiness score ${clamped} out of 100. ${label}. ${indication}`}
       >
         <svg
           className="gauge"
@@ -151,6 +153,10 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
           label={label}
           className="mt-4 !px-4 !py-1.5 !text-[1.3rem]"
         />
+
+        <p className="m-0 mt-4 max-w-[22rem] text-[1.05rem] leading-snug text-[var(--ink-soft)]" aria-hidden="true">
+          {indication}
+        </p>
       </div>
     </Window>
   );

@@ -5,8 +5,8 @@ import Foundation
 /// ScreeningResults the dashboard shows. The numbers themselves come from the web backend's
 /// POST /api/voice/analyze (see VoiceAnalysis.swift).
 ///
-/// Kept gentle: the dashboard talks about readiness and "your usual". The ranges (and the word
-/// Parkinson's) only appear when someone opens a vital to see the details.
+/// Kept gentle: the overview shows readiness plus a short, non-diagnostic Parkinson’s indication.
+/// The numeric ranges appear when someone opens a vital to see the details.
 /// Mirrors frontend/src/data/voiceReading.ts.
 struct Measure {
     let key: MeasureKey
@@ -183,6 +183,18 @@ enum VoiceReading {
         }
         let start = trouble.isEmpty ? "" : "\(lead) "
         return "\(start)Your voice sounded quite different from usual today. A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor."
+    }
+
+    /// Short Parkinson’s line for the overview, next to the score. Never a diagnosis — just how
+    /// today’s voice patterns compare. Mirrors parkinsonsIndication() in voiceReading.ts.
+    static func parkinsonsIndication(score: Int) -> String {
+        if score >= 80 {
+            return "You most likely don’t have Parkinson’s — today’s voice patterns look typical."
+        }
+        if score >= 60 {
+            return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off."
+        }
+        return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis — mention it to someone you trust or your doctor if it keeps up."
     }
 
     /// "Borderline", and why, for the top of the details. Nil when nothing was measured.

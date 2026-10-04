@@ -13,6 +13,7 @@ struct ReadinessDial: View {
     @State private var hum = false
 
     private var clamped: Int { min(max(score, 0), 100) }
+    private var indication: String { VoiceReading.parkinsonsIndication(score: clamped) }
 
     var body: some View {
         RetroWindow(title: "Today's Readiness", index: 1) {
@@ -29,10 +30,18 @@ struct ReadinessDial: View {
 
                 StatusChip(status: statusColor, label: statusColor.label, large: true)
                     .padding(.top, 16)
+
+                Text(indication)
+                    .font(AppFont.body(17))
+                    .foregroundStyle(AppTheme.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 16)
+                    .frame(maxWidth: 340)
             }
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Today's readiness score \(clamped) out of 100. \(statusColor.label).")
+            .accessibilityLabel("Today's readiness score \(clamped) out of 100. \(statusColor.label). \(indication)")
         }
         .onAppear(perform: animateIn)
     }

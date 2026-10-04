@@ -56,7 +56,7 @@ import type { Captured } from "@/lib/voiceClient";
  * The Talk / Done button is still there: tap it to send an answer early, or hold it and let go.
  *
  * It's a real conversation: the answer is recorded, ElevenLabs turns it into words, and Gemini writes
- * the host's reply (with today's weather and news for what you're into). Without a microphone,
+ * the host's reply (with a light fun fact or news for what you're into). Without a microphone,
  * a key or a backend it falls back to a sample answer after a moment, so the show still plays.
  *
  * The answers are also what the voice analysis listens to, so the show keeps asking plain questions

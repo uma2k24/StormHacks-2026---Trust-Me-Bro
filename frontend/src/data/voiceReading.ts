@@ -4,8 +4,8 @@
  * ScreeningResults the dashboard shows. The numbers themselves come from POST /api/voice/analyze
  * (lib/voice/, types/voice.ts).
  *
- * Kept gentle: the dashboard talks about readiness and "your usual". The ranges (and the word
- * Parkinson's) only appear when someone opens a vital to see the details.
+ * Kept gentle: the overview shows readiness plus a short, non-diagnostic Parkinson’s indication.
+ * The numeric ranges appear when someone opens a vital to see the details.
  * Mirrored in ios/VoiceReadiness/Models/VoiceReading.swift.
  */
 
@@ -165,6 +165,20 @@ export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>): 
     return `${trouble ? `${lead} ` : "Your voice sounded a little different from usual today. "}Rest, a warm drink and a glass of water may help.`;
   }
   return `${trouble ? `${lead} ` : ""}Your voice sounded quite different from usual today. A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor.`;
+}
+
+/**
+ * Short Parkinson’s line for the overview, next to the score. Never a diagnosis — just how today’s
+ * voice patterns compare. Mirrored in VoiceReading.parkinsonsIndication(score:).
+ */
+export function parkinsonsIndication(score: number): string {
+  if (score >= 80) {
+    return "You most likely don’t have Parkinson’s — today’s voice patterns look typical.";
+  }
+  if (score >= 60) {
+    return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off.";
+  }
+  return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis — mention it to someone you trust or your doctor if it keeps up.";
 }
 
 /** "Borderline", and why, for the top of the details. */
