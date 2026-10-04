@@ -16,7 +16,7 @@ import type { InterestId, Profile } from "@/data/profile";
  * One request is one Gemini call. Any failure falls back to the mock show.
  */
 
-const config = {
+export const config = {
   geminiKey: process.env.GEMINI_API_KEY,
   geminiModel: process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
   // used when a listener has not said where they live
@@ -29,10 +29,10 @@ const config = {
 const CACHE_MS = 30 * 60 * 1000;
 
 /** The interests that are about things that happen day to day; the rest are evergreen. */
-const FRESH_INTERESTS: InterestId[] = ["sports", "local"];
+export const FRESH_INTERESTS: InterestId[] = ["sports", "local"];
 
 /** How each interest is described to the writer. */
-const INTEREST_PROMPTS: Record<InterestId, string> = {
+export const INTEREST_PROMPTS: Record<InterestId, string> = {
   sports: "sports (their team or favourite sport, if they named one)",
   local: "local news and community events",
   garden: "gardening",
@@ -45,14 +45,14 @@ const INTEREST_PROMPTS: Record<InterestId, string> = {
 
 // ---------- where they are --------------------------------------------------
 
-type Place = {
+export type Place = {
   city: string;
   /** Missing when the town could not be found: the weather segment then stays general. */
   coords?: { latitude: number; longitude: number };
   timeZone: string;
 };
 
-const defaultPlace: Place = {
+export const defaultPlace: Place = {
   city: config.city,
   coords: { latitude: config.latitude, longitude: config.longitude },
   timeZone: config.timeZone,
@@ -60,7 +60,7 @@ const defaultPlace: Place = {
 
 const places = new Map<string, Promise<Place>>();
 
-function resolvePlace(text: string): Promise<Place> {
+export function resolvePlace(text: string): Promise<Place> {
   const query = text.trim();
   if (!query) return Promise.resolve(defaultPlace);
 
@@ -146,13 +146,7 @@ async function buildBriefing(profile: Profile, picks: InterestId[]): Promise<Bri
     return defaultPlace;
   });
 
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: place.timeZone,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
+  const today = todayIn(place.timeZone);
 
   const weather = await fetchWeather(place).catch((error) => {
     console.warn("[briefing] weather unavailable:", error);
@@ -175,6 +169,17 @@ async function buildBriefing(profile: Profile, picks: InterestId[]): Promise<Bri
   return { source: "live", segments: parseSegments(text, picks) };
 }
 
+/** "Saturday, October 3, 2026" on the listener's own calendar. */
+export function todayIn(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
+}
+
 // ---------- weather ---------------------------------------------------------
 
 type HourlyWeather = {
@@ -184,7 +189,7 @@ type HourlyWeather = {
   weather_code: number[];
 };
 
-async function fetchWeather({ coords, timeZone }: Place): Promise<string> {
+export async function fetchWeather({ coords, timeZone }: Place): Promise<string> {
   if (!coords) throw new Error("no coordinates for this town");
   const params = new URLSearchParams({
     latitude: String(coords.latitude),
@@ -297,7 +302,19 @@ type GeminiResponse = {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
 };
 
-async function askGemini(prompt: string, { search }: { search: boolean }): Promise<string> {
+type AskOptions = {
+  search: boolean;
+  /** Defaults to the show-writing prompt. */
+  system?: string;
+  timeoutMs?: number;
+  temperature?: number;
+  maxOutputTokens?: number;
+};
+
+export async function askGemini(
+  prompt: string,
+  { search, system = SYSTEM_PROMPT, timeoutMs = 25000, temperature = 0.9, maxOutputTokens }: AskOptions,
+): Promise<string> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent`,
     {
@@ -307,12 +324,12 @@ async function askGemini(prompt: string, { search }: { search: boolean }): Promi
         "x-goog-api-key": config.geminiKey ?? "",
       },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         ...(search ? { tools: [{ google_search: {} }] } : {}),
-        generationConfig: { temperature: 0.9 },
+        generationConfig: { temperature, ...(maxOutputTokens ? { maxOutputTokens } : {}) },
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(timeoutMs),
     },
   );
   if (!response.ok) {

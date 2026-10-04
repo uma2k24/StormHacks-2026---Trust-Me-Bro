@@ -22,6 +22,7 @@ import {
 import { mockResults } from "@/data/mockResults";
 import { demoProfile, type Profile, profileKey } from "@/data/profile";
 import { prefetchClip, unlockRadioVoice } from "@/lib/radioVoice";
+import { primeMicrophone } from "@/lib/recorder";
 import {
   loadLearned,
   loadTodaysShow,
@@ -134,9 +135,12 @@ export default function Home() {
     [stored],
   );
 
-  const startCheckIn = useCallback(() => {
+  const startCheckIn = useCallback(async () => {
     unlockRadioVoice(); // inside the tap, so the browser lets the radio speak
     setOnAir(briefing);
+    // Ask for the microphone now, so the browser's question comes before the show and never in the
+    // middle of it. (If it is left unanswered the show starts anyway, and says so when it needs to listen.)
+    await Promise.race([primeMicrophone(), new Promise((resolve) => window.setTimeout(resolve, 15000))]);
     setScreen("recording");
   }, [briefing]);
   const finishRecording = useCallback(() => setScreen("processing"), []);
@@ -177,9 +181,10 @@ export default function Home() {
             />
           ) : null}
 
-          {current === "recording" ? (
+          {current === "recording" && profile ? (
             <ActiveScreen
               segments={(onAir ?? briefing).segments}
+              profile={profile}
               onAnswer={recordAnswer}
               onComplete={finishRecording}
             />

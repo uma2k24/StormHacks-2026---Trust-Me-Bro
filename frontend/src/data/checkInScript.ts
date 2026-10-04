@@ -24,7 +24,7 @@ export type BriefingSegment = {
   brief: string;
   /** The open question that invites a real answer. */
   question: string;
-  /** What the mock microphone "hears" (the mic is still simulated). */
+  /** The sample answer played when there is no microphone or transcription to hear a real one. */
   mockReply: string;
 };
 
@@ -131,12 +131,69 @@ export function mockBriefingFor(
 }
 
 // Timings for the radio screen. Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
-export const RECEIVE_MS = 900; // the question "arrives" before the talk button wakes up
-export const LISTEN_MS = 2500; // a mock answer listens this long, then sends itself
+export const RECEIVE_MS = 900; // the question "arrives" before the microphone opens
+export const LISTEN_MS = 2500; // a sample answer listens this long, then sends itself
 export const ACKNOWLEDGE_MS = 1600; // your own words stay on the screen this long
 export const MIN_HOLD_MS = 280; // a press shorter than this is a tap, not a hold
 export const READ_MS_PER_WORD = 330; // without a voice, a brief stays up about as long as reading it aloud
 export const MIN_READ_MS = 2200;
+
+// Real answers (see lib/recorder.ts). Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
+export const SPEECH_DB = -40; // louder than this (in dBFS) counts as talking
+export const SILENCE_END_MS = 2200; // this long without talking, after they have talked, sends the answer
+export const NO_SPEECH_MS = 15000; // this long without ever talking sends it anyway: nothing was heard
+export const MAX_ANSWER_MS = 45000; // the longest one answer can be
+export const AFTER_REPLY_MS = 600; // a breath after the radio's reply before the next segment
+export const HANDS_FREE_GAP_MS = 400; // after the radio stops talking the microphone opens this much later, so it doesn't hear itself
+
+/** The radio's own lines for when the conversation can't go to plan. The radio carries on by itself after each. */
+export const MISSED_LINE = "Sorry, I didn't catch that. Could you say it again?";
+export const GIVE_UP_LINE = "That's all right. Let's move on.";
+export const MIC_BLOCKED_LINE = "The microphone is blocked, so I'll use a sample answer.";
+export const MIC_MISSING_LINE = "I can't find a microphone, so I'll use a sample answer.";
+export const THINKING_LINE = "Just a moment…";
+
+/**
+ * How many words of a line have been spoken once `fraction` (0...1) of its audio has played, so the
+ * words can appear on screen as the voice reaches them. Longer words and the pause after a comma or
+ * a full stop take longer to say, so they take more of the line. A word shows a touch before it is
+ * heard: the text is never behind the voice.
+ * Mirrored in CheckInScript.wordsSpoken(in:fraction:) on iOS.
+ */
+export function wordsSpoken(text: string, fraction: number): number {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (fraction >= 1) return words.length;
+
+  const pause = (word: string) => (/[.!?…]$/.test(word) ? 6 : /[,;:—]$/.test(word) ? 3 : 0);
+  const weights = words.map((word) => Math.max(2, word.length) + pause(word));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+
+  let before = 0;
+  let count = 0;
+  for (const weight of weights) {
+    if (before / total > fraction + 0.015) break;
+    count += 1;
+    before += weight;
+  }
+  return count;
+}
+
+const THANKS = [
+  "Thank you for telling me that, {name}. I always enjoy hearing from you.",
+  "That sounds lovely, {name}. Thanks for sharing it with me.",
+  "I like hearing that, {name}. Thank you for chatting.",
+];
+const SIGN_OFF = "Thank you for sharing that, {name}. That's the show for today. Have a lovely day.";
+
+/**
+ * What the radio says back when Gemini can't write a reply (no key, offline, an error): a warm,
+ * fixed line that never claims to know anything. The last segment signs off the show.
+ * Mirrored in CheckInScript.fallbackReply(for:segmentIndex:last:) on iOS.
+ */
+export function fallbackReply(name: string, segmentIndex: number, last: boolean): string {
+  const line = last ? SIGN_OFF : THANKS[segmentIndex % THANKS.length];
+  return line.replace("{name}", name.trim() || "friend");
+}
 
 /** How long to leave text on screen when there is no audio to wait for. */
 export function readingTime(text: string): number {

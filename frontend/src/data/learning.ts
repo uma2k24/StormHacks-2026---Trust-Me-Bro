@@ -33,11 +33,11 @@ export const emptyLearned: Learned = {
   interests: {},
 };
 
-/** What the person did on one segment. The mic is simulated, so this is timing, not words. */
+/** What the person did on one segment, measured from their recording: timing, never what they said. */
 export type AnswerTiming = {
-  /** From the question being asked until they pressed Talk. */
+  /** From the question being asked until they started speaking. */
   latencyMs: number;
-  /** From pressing Talk until they were done. */
+  /** From their first word to their last: how long they actually talked, not counting pauses around it. */
   talkedMs: number;
 };
 

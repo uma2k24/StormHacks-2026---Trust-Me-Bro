@@ -765,6 +765,19 @@ a {
   overflow-wrap: anywhere;
   text-shadow: 0 0 18px currentColor;
 }
+/* words the radio hasn't said yet are laid out but not shown, so the text grows without shifting */
+.live-word {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+.live-word[data-said="true"] {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-word {
+    transition: none;
+  }
+}
 /* longer text reads a size down; anything longer still scrolls */
 .radio-caption[data-size="medium"] {
   font-size: clamp(1.5rem, 6.2vw, 1.85rem);

@@ -47,8 +47,21 @@ export function prefetchClip(text: string): Promise<string | null> {
   return clip;
 }
 
-/** Reads a line aloud and resolves when it has finished (or was aborted). */
-export async function speak(text: string, signal: AbortSignal): Promise<void> {
+/** Resolves once a line's audio is ready (or has taken too long), so its text and voice can start together. */
+export async function prepareClip(text: string, signal: AbortSignal): Promise<void> {
+  await Promise.race([prefetchClip(text), wait(CLIP_TIMEOUT_MS, signal)]);
+}
+
+/**
+ * Reads a line aloud and resolves when it has finished (or was aborted). `onProgress` is told how
+ * far through the line the voice is (0...1) many times a second, so its words can appear as they
+ * are said. Without audio it paces itself over the reading time instead, so the words still arrive.
+ */
+export async function speak(
+  text: string,
+  signal: AbortSignal,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
   const url = await Promise.race([
     prefetchClip(text),
     wait(CLIP_TIMEOUT_MS, signal).then(() => null),
@@ -56,17 +69,25 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return;
 
   const player = audio;
-  if (!url || !player) return wait(readingTime(text), signal);
+  if (!url || !player) return pace(text, signal, onProgress);
 
   player.src = url;
   try {
     await player.play();
   } catch {
-    return wait(readingTime(text), signal);
+    return pace(text, signal, onProgress);
   }
+
+  onProgress?.(0);
+  const ticker = window.setInterval(() => {
+    if (player.duration > 0 && Number.isFinite(player.duration)) {
+      onProgress?.(Math.min(1, player.currentTime / player.duration));
+    }
+  }, 50);
 
   await new Promise<void>((resolve) => {
     const done = () => {
+      window.clearInterval(ticker);
       player.removeEventListener("ended", done);
       player.removeEventListener("error", done);
       signal.removeEventListener("abort", stop);
@@ -80,6 +101,25 @@ export async function speak(text: string, signal: AbortSignal): Promise<void> {
     player.addEventListener("error", done);
     signal.addEventListener("abort", stop);
   });
+  if (!signal.aborted) onProgress?.(1);
+}
+
+/** No voice: the line stays up for about as long as it takes to read, with its words arriving over that time. */
+async function pace(
+  text: string,
+  signal: AbortSignal,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  const ms = readingTime(text);
+  const startedAt = Date.now();
+  onProgress?.(0);
+  const ticker = window.setInterval(
+    () => onProgress?.(Math.min(1, (Date.now() - startedAt) / ms)),
+    50,
+  );
+  await wait(ms, signal);
+  window.clearInterval(ticker);
+  if (!signal.aborted) onProgress?.(1);
 }
 
 /** Resolves after `ms`, or straight away once aborted. */
