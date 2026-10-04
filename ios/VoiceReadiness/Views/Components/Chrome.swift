@@ -244,7 +244,7 @@ private struct ConfettiDots: View {
 
 // MARK: - Windows
 
-/// A 90s-desktop window: pinstriped teal title bar, close box, hard shadow.
+/// A 90s-desktop window: pinstriped teal title bar, hard shadow.
 struct RetroWindow<Content: View>: View {
     let title: String
     var index: Int = 0
@@ -272,12 +272,6 @@ struct RetroWindow<Content: View>: View {
 
     private var titleBar: some View {
         HStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(Color.white)
-                .frame(width: 18, height: 18)
-                .overlay { RoundedRectangle(cornerRadius: 3, style: .continuous).stroke(AppTheme.ink, lineWidth: 2.5) }
-                .accessibilityHidden(true)
-
             Text(title)
                 .font(AppFont.head(19, relativeTo: .headline))
                 .foregroundStyle(AppTheme.ink)

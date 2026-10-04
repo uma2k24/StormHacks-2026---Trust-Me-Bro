@@ -93,7 +93,7 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
           </div>
         </Window>
 
-        <Window title="Your family" index={2}>
+        <Window title="Someone close" index={2}>
           <div className="flex flex-col gap-4">
             <p className="field-hint m-0">
               Someone who&apos;d like to hear how you&apos;re doing. One tap calls them or sends them your news.

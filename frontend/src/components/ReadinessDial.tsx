@@ -148,10 +148,11 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
           <span className="display text-[1.5rem] text-[var(--ink-soft)]">out of 100</span>
         </p>
 
+        {/* settles in as the needle lands */}
         <StatusChip
           status={statusColor}
           label={label}
-          className="mt-4 !px-4 !py-1.5 !text-[1.3rem]"
+          className="dial-chip mt-4 !px-4 !py-1.5 !text-[1.3rem]"
         />
 
         <p className="m-0 mt-4 max-w-[22rem] text-[1.05rem] leading-snug text-[var(--ink-soft)]" aria-hidden="true">

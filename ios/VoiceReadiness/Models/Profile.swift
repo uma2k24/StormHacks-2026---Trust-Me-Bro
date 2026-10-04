@@ -211,9 +211,9 @@ enum TalkSpeedStep: String, CaseIterable, Identifiable {
     /// Multiplier for `AVAudioPlayer.rate` and for pacing when there is no voice.
     var rate: Float {
         switch self {
-        case .slow: return 0.75
-        case .steady: return 1
-        case .fast: return 1.25
+        case .slow: return 0.7
+        case .steady: return 0.85
+        case .fast: return 1
         }
     }
 

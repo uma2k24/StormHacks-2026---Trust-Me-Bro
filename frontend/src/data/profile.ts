@@ -112,9 +112,9 @@ export type TalkSpeed = "slow" | "steady" | "fast";
 export const DEFAULT_TALK_SPEED: TalkSpeed = "steady";
 
 export const TALK_SPEEDS: { id: TalkSpeed; label: string; rate: number }[] = [
-  { id: "slow", label: "Slow", rate: 0.75 },
-  { id: "steady", label: "Steady", rate: 1 },
-  { id: "fast", label: "Fast", rate: 1.25 },
+  { id: "slow", label: "Slow", rate: 0.7 },
+  { id: "steady", label: "Steady", rate: 0.85 },
+  { id: "fast", label: "Fast", rate: 1 },
 ];
 
 export function isTalkSpeed(value: unknown): value is TalkSpeed {

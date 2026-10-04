@@ -15,6 +15,9 @@ type IdleScreenProps = {
   doneToday: boolean;
   week: WeekDay[];
   streak: number;
+  /** Today's show has only just been heard: today's lamp lights up as home appears (once). */
+  lightToday: boolean;
+  onLampLit: () => void;
   /** How many of today's little things are ticked off, out of how many. */
   listDone: number;
   listTotal: number;
@@ -37,6 +40,8 @@ export function IdleScreen({
   doneToday,
   week,
   streak,
+  lightToday,
+  onLampLit,
   listDone,
   listTotal,
   onStart,
@@ -104,7 +109,7 @@ export function IdleScreen({
       )}
 
       {doneToday ? (
-        <WeekLamps week={week} streak={streak} />
+        <WeekLamps week={week} streak={streak} lightToday={lightToday} onLit={onLampLit} />
       ) : (
         <div
           className="stat pop-in w-full text-left"

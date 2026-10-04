@@ -51,8 +51,18 @@ final class AnswerRecorder {
         didSet { if !held { lastLoudAt = .now } } // the pause starts counting from letting go
     }
 
+    /// How loud the microphone is right now, 0 (a quiet room) to 1 (loud talking), for the bars on
+    /// screen. Read at the meter's own pace (ten times a second); the bars smooth it out.
+    var level: Double {
+        let level = (Double(power) - Self.levelFloor) / (Self.levelFull - Self.levelFloor)
+        return min(1, max(0, level))
+    }
+
     /// A pause shorter than this between words doesn't stop the clock on how long they have talked.
     private static let voicedHangover: TimeInterval = 0.3
+    // level: this loud (dBFS) or quieter reads 0, this loud or louder reads 1 (as in recorder.ts)
+    private static let levelFloor: Double = -55
+    private static let levelFull: Double = -15
 
     private let recorder: AVAudioRecorder
     private let url: URL
@@ -63,6 +73,7 @@ final class AnswerRecorder {
     private var lastLoudAt = Date.now
     private var lastTickAt = Date.now
     private var voiced: TimeInterval = 0
+    private var power: Float = -160
     private var ended = false
     private var meter: Task<Void, Never>?
 
@@ -117,7 +128,8 @@ final class AnswerRecorder {
         let now = Date.now
         let sinceTick = now.timeIntervalSince(lastTickAt)
         lastTickAt = now
-        if recorder.averagePower(forChannel: 0) > CheckInScript.speechDB {
+        power = recorder.averagePower(forChannel: 0)
+        if power > CheckInScript.speechDB {
             if firstLoudAt == nil { firstLoudAt = now }
             lastLoudAt = now
         }

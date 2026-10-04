@@ -82,7 +82,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    RetroWindow(title: "Your family", index: 2) {
+                    RetroWindow(title: "Someone close", index: 2) {
                         VStack(alignment: .leading, spacing: 18) {
                             Text("Someone who'd like to hear how you're doing. One tap calls them or sends them your news.")
                                 .font(AppFont.body(18))

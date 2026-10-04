@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var analysis: VoiceAnalysis?
     // The day this screen opened on: an app left running overnight keeps the show it has.
     @State private var today = Learning.dayKey()
+    // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
+    @State private var lightLamp = false
 
     private var textSize: Binding<TextSizeStep> {
         Binding(
@@ -117,6 +119,8 @@ struct ContentView: View {
                             doneToday: history.days[today] != nil,
                             week: Daily.lastSevenDays(history, today: today),
                             streak: Daily.streak(history, today: today),
+                            lightToday: lightLamp,
+                            onLampLit: { lightLamp = false },
                             listDone: todaysList.filter { ticked.contains($0.id) }.count,
                             listTotal: todaysList.count,
                             onStart: {
@@ -198,6 +202,7 @@ struct ContentView: View {
     /// The show is over. Today counts as done whatever happens next; the voice is analysed while the
     /// Processing screen shows, and a real score replaces the placeholder (or the day stays out of the trend).
     private func finishRecording(_ captured: CapturedVoice) {
+        if history.days[today] == nil { lightLamp = true }
         historyJSON = History(json: historyJSON)
             .recordingCheckIn(on: today, score: ScreeningResults.mock.readinessScore).json
         analysis = nil

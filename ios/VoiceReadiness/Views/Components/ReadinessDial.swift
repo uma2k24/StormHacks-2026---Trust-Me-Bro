@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Speedometer-style readiness gauge: Rest / Pay Attention / Ready zones,
-/// a needle that swings in with a spring, and a score that counts up with it.
+/// a needle that swings in with a spring, and a score that counts up with it. The status settles in
+/// as the needle lands, with a light tap of the phone.
 struct ReadinessDial: View {
     let score: Int
     let statusColor: StatusColor
@@ -11,6 +12,7 @@ struct ReadinessDial: View {
     @State private var needleScore: Double = 0
     @State private var shownScore: Double = 0
     @State private var hum = false
+    @State private var settled = false
 
     private var clamped: Int { min(max(score, 0), 100) }
     private var indication: String { VoiceReading.parkinsonsIndication(score: clamped) }
@@ -29,6 +31,9 @@ struct ReadinessDial: View {
                 .padding(.top, 4)
 
                 StatusChip(status: statusColor, label: statusColor.label, large: true)
+                    .opacity(settled ? 1 : 0)
+                    .offset(y: settled ? 0 : 8)
+                    .scaleEffect(settled ? 1 : 0.94)
                     .padding(.top, 16)
 
                 Text(indication)
@@ -44,6 +49,7 @@ struct ReadinessDial: View {
             .accessibilityLabel("Today's readiness score \(clamped) out of 100. \(statusColor.label). \(indication)")
         }
         .onAppear(perform: animateIn)
+        .sensoryFeedback(.impact(weight: .light), trigger: settled) { _, landed in landed && !reduceMotion }
     }
 
     private var numeral: some View {
@@ -64,6 +70,7 @@ struct ReadinessDial: View {
         if reduceMotion {
             needleScore = target
             shownScore = target
+            settled = true
             return
         }
 
@@ -74,7 +81,9 @@ struct ReadinessDial: View {
             shownScore = target
         }
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: .seconds(1.7))
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.65)) { settled = true }
+            try? await Task.sleep(for: .seconds(0.3))
             hum = true
         }
     }

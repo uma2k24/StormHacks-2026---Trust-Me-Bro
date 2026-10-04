@@ -52,7 +52,8 @@ import type { Captured } from "@/lib/voiceClient";
  *   notice    - something to say before it listens again (it didn't catch that, no microphone)
  *   closing   - after the last segment, the listener's own daily reminder ("take your pill"), then done
  * Whatever the radio says appears word by word as it is said, and the text scrolls up by itself
- * when it is longer than the screen.
+ * when it is longer than the screen. The sign on top reads "On air" while the radio talks and
+ * "Mic on" while the microphone is open, when the bars follow the listener's voice.
  * The Talk / Done button is still there: tap it to send an answer early, or hold it and let go.
  *
  * It's a real conversation: the answer is recorded, ElevenLabs turns it into words, and Gemini writes
@@ -142,6 +143,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   // the microphone: opened by itself when a question has been asked (permission was asked for at Play)
   const recorder = useRef<Promise<Recorder> | null>(null);
   const recorderReady = useRef(false);
+  // the microphone once it is really open, for the bars and the "Mic on" sign
+  const openMic = useRef<Recorder | null>(null);
+  const [micOpen, setMicOpen] = useState(false);
   // true once real answers aren't possible (no microphone, no transcription): the sample answer plays instead
   const sample = useRef(false);
   // answers that came back empty, for this segment
@@ -186,6 +190,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     await speak(text, signal, (fraction) => setRevealed(wordsSpoken(text, fraction)));
     if (!signal.aborted) setRevealed(null);
   }, []);
+
+  /** How loud the open microphone is (0...1): what the bars follow while it listens. */
+  const micLevel = useCallback(() => openMic.current?.level() ?? 0, []);
 
   // Each segment: read the brief, ask the question, then open the microphone by itself.
   useEffect(() => {
@@ -466,6 +473,8 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
       listenTimer.current = null;
     }
     pressStartedAt.current = null;
+    openMic.current = null;
+    setMicOpen(false);
     if (sample.current) finishSample();
     else void finishLive();
   };
@@ -507,6 +516,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
       (open) => {
         recorderReady.current = true;
         open.setHeld(pressStartedAt.current !== null);
+        if (phaseRef.current !== "listening") return; // already sent while it was opening
+        openMic.current = open;
+        setMicOpen(true);
       },
       micFailed,
     );
@@ -580,6 +592,8 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
       phase === "replying" ||
       phase === "notice" ||
       phase === "closing");
+  // the sign on top: lit while the radio talks, "Mic on" only while the microphone is really open
+  const onAir = micOpen && phase === "listening" ? "mic" : live ? "air" : "off";
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -589,9 +603,15 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
 
       <div className="radio">
         <div className="radio-top">
-          <div className="radio-grille" aria-hidden="true">
-            <i /><i /><i /><i /><i /><i />
-          </div>
+          {/* the screen and the caption already say this out loud, so the sign is for the eyes only */}
+          <p className="on-air" data-state={onAir} aria-hidden="true">
+            <span className="on-air-lamp" />
+            {/* both words share one spot, so the row never shifts when they swap */}
+            <span className="on-air-words">
+              <span data-shown={onAir !== "mic"}>On air</span>
+              <span data-shown={onAir === "mic"}>Mic on</span>
+            </span>
+          </p>
           <div
             className="leds"
             role="progressbar"
@@ -660,6 +680,8 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
               phase === "replying" ||
               phase === "closing"
             }
+            // while it listens the bars follow the microphone: flat in a quiet room, rising as they talk
+            level={phase === "listening" ? micLevel : undefined}
           />
         </div>
 

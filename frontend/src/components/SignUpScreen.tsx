@@ -22,7 +22,7 @@ const STEP_TITLES = [
   "Where you live",
   "What you like",
   "Anything else",
-  "Your family",
+  "Someone close",
   "A daily reminder",
   "Your radio time",
   "Text size",

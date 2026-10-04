@@ -12,8 +12,9 @@ import SwiftUI
 ///   notice    - something to say before it listens again (it didn't catch that, no microphone)
 ///   closing   - after the last segment, the listener's own daily reminder ("take your pill"), then done
 /// Whatever the radio says appears word by word as it is said, and the text scrolls up by itself
-/// when it is longer than the screen. The Talk / Done button is still there: tap it to send an
-/// answer early, or hold it and let go.
+/// when it is longer than the screen. The sign on top reads "On air" while the radio talks and
+/// "Mic on" while the microphone is open, when the bars follow the listener's voice. The Talk / Done
+/// button is still there: tap it to send an answer early, or hold it and let go.
 ///
 /// It's a real conversation: the answer is recorded, ElevenLabs turns it into words, and Gemini writes
 /// the host's reply (with a light fun fact or news for what you're into). Without a microphone, a key
@@ -82,6 +83,8 @@ struct RecordingView: View {
     @State private var earlier: [ConversationService.Earlier] = []
     @State private var pressing = false
     @State private var pulse = false
+    // the screen's picture comes into focus as the radio opens (see tuneIn)
+    @State private var tunedIn = false
 
     private var turns: [BriefingSegment] { segments + extraTurns }
     // One lamp for each briefing segment and one for the last stretch (any extra questions, then the "ahhh").
@@ -148,7 +151,10 @@ struct RecordingView: View {
             .padding(.trailing, 8)
             .padding(.top, 22)
             .padding(.bottom, 22)
-            .onAppear { playSegment() }
+            .onAppear {
+                tuneIn()
+                playSegment()
+            }
             .onDisappear {
                 // Leaving the screen stops everything: the voice, any timers, and above all the microphone.
                 flowTask?.cancel()
@@ -183,13 +189,7 @@ struct RecordingView: View {
 
     private var topRow: some View {
         HStack {
-            // a row of speaker slots
-            HStack(spacing: 7) {
-                ForEach(0..<6, id: \.self) { _ in
-                    Capsule().fill(AppTheme.ink.opacity(0.8)).frame(width: 7, height: 26)
-                }
-            }
-            .accessibilityHidden(true)
+            OnAirSign(state: onAir)
 
             Spacer(minLength: 12)
 
@@ -257,14 +257,19 @@ struct RecordingView: View {
                     )
                 )
 
+            // while it listens the bars follow the microphone: flat in a quiet room, rising as they talk
             WaveformView(
                 barCount: 9,
                 height: 35,
-                active: waveformActive
+                active: waveformActive,
+                level: micLevel
             )
-            .id(waveformActive)
+            .id("\(waveformActive)-\(phase == .listening)")
             .foregroundStyle(screenColor)
         }
+        .opacity(tunedIn ? 1 : 0)
+        .blur(radius: tunedIn ? 0 : 4)
+        .brightness(tunedIn ? 0 : 0.35)
         .padding(.horizontal, 20)
         .padding(.vertical, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -298,6 +303,18 @@ struct RecordingView: View {
 
     private var waveformActive: Bool {
         phase == .briefing || phase == .speaking || phase == .listening || phase == .replying || phase == .closing
+    }
+
+    /// While it listens, how loud the microphone is (0...1): what the bars follow.
+    private var micLevel: (@MainActor () -> Double)? {
+        guard phase == .listening else { return nil }
+        return { recorder?.level ?? 0 }
+    }
+
+    /// The sign on top: lit while the radio talks, "Mic on" only while the microphone is really open.
+    private var onAir: OnAir {
+        if phase == .listening && recorder != nil { return .listening }
+        return liveWords != nil ? .talking : .off
     }
 
     @ViewBuilder
@@ -376,6 +393,16 @@ struct RecordingView: View {
     }
 
     // MARK: Flow
+
+    /// Tuning in: as the radio opens, its picture comes into focus, like a station locking in.
+    /// Silent, under a third of a second, and skipped when motion is reduced.
+    private func tuneIn() {
+        if reduceMotion {
+            tunedIn = true
+        } else {
+            withAnimation(.easeOut(duration: 0.3)) { tunedIn = true }
+        }
+    }
 
     private func setPhase(_ next: Phase) {
         if reduceMotion {
@@ -735,6 +762,59 @@ struct RecordingView: View {
         case .listening: finish()
         default: break
         }
+    }
+}
+
+private enum OnAir {
+    case talking
+    case listening
+    case off
+}
+
+/// The ON AIR sign: a little backlit plate, glowing like the screen. Lit while the radio talks,
+/// "Mic on" in coral while the microphone is open, dark in between. Steady, never blinking.
+/// The screen already says all this to VoiceOver, so the sign is for the eyes only.
+/// Mirrors `.on-air` in ActiveScreen.tsx.
+private struct OnAirSign: View {
+    let state: OnAir
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var glow: Color {
+        switch state {
+        case .talking: return AppTheme.tealGlow
+        case .listening: return AppTheme.accentGlow
+        case .off: return AppTheme.tealGlow.opacity(0.45)
+        }
+    }
+
+    var body: some View {
+        let lit = state != .off
+
+        HStack(spacing: 7) {
+            Circle()
+                .fill(lit ? glow : AppTheme.inkSoft)
+                .frame(width: 11, height: 11)
+                .shadow(color: lit ? glow : .clear, radius: 4)
+
+            // both words share one spot, so the row never shifts when they swap
+            ZStack {
+                Text("ON AIR").opacity(state == .listening ? 0 : 1)
+                Text("MIC ON").opacity(state == .listening ? 1 : 0)
+            }
+            .font(.custom("AtkinsonHyperlegible-Bold", fixedSize: 15))
+            .tracking(1.2)
+            .shadow(color: lit ? glow.opacity(0.7) : .clear, radius: 5)
+        }
+        .foregroundStyle(glow)
+        .padding(.leading, 9)
+        .padding(.trailing, 12)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(AppTheme.ink))
+        .overlay { Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1.5).padding(2) }
+        .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 2.5) }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: state)
+        .accessibilityHidden(true)
     }
 }
 

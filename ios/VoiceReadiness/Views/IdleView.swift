@@ -11,6 +11,9 @@ struct IdleView: View {
     let doneToday: Bool
     let week: [Daily.WeekDay]
     let streak: Int
+    /// Today's show has only just been heard: today's lamp lights up as home appears (once).
+    let lightToday: Bool
+    let onLampLit: () -> Void
     /// How many of today's little things are ticked off, out of how many.
     let listDone: Int
     let listTotal: Int
@@ -46,7 +49,7 @@ struct IdleView: View {
                         Spacer(minLength: 12)
 
                         if doneToday {
-                            WeekLamps(week: week, streak: streak)
+                            WeekLamps(week: week, streak: streak, lightToday: lightToday, onLit: onLampLit)
                         } else {
                             lineup
                         }
@@ -248,8 +251,23 @@ struct IdleView: View {
 struct WeekLamps: View {
     let week: [Daily.WeekDay]
     let streak: Int
+    /// Told when today's lamp has started lighting, so it doesn't light up again next time.
+    let onLit: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .body) private var lampSize: CGFloat = 34
+    // Today's show has only just been heard: today's lamp starts dark and warms up, once. Kept from
+    // the first appearance, so the lamp goes on lighting after the screen above has been told.
+    @State private var lighting: Bool
+    @State private var warmedUp = false
+    @State private var glowing = false
+
+    init(week: [Daily.WeekDay], streak: Int, lightToday: Bool = false, onLit: @escaping () -> Void = {}) {
+        self.week = week
+        self.streak = streak
+        self.onLit = onLit
+        _lighting = State(initialValue: lightToday)
+    }
 
     var body: some View {
         let card = RoundedRectangle(cornerRadius: AppTheme.radius, style: .continuous)
@@ -264,10 +282,12 @@ struct WeekLamps: View {
 
             HStack(spacing: 0) {
                 ForEach(Array(week.enumerated()), id: \.element.id) { index, day in
+                    let lit = day.listened && !(day.today && lighting && !warmedUp)
+
                     VStack(spacing: 7) {
                         // as big as it can be up to `lamp`, shrinking to share the row seven ways
                         Circle()
-                            .fill(day.listened ? AppTheme.teal : AppTheme.paperDeep)
+                            .fill(lit ? AppTheme.teal : AppTheme.paperDeep)
                             .overlay { Circle().stroke(AppTheme.ink, lineWidth: 2.5) }
                             .overlay {
                                 if day.listened {
@@ -277,10 +297,24 @@ struct WeekLamps: View {
                                             .foregroundStyle(AppTheme.ink)
                                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     }
+                                    .opacity(lit ? 1 : 0)
+                                    .scaleEffect(lit ? 1 : 0.5)
                                 }
                             }
                             .background {
-                                if day.listened { Circle().fill(AppTheme.tealSoft).padding(-4) }
+                                if day.listened {
+                                    Circle().fill(AppTheme.tealSoft).padding(-4).opacity(lit ? 1 : 0)
+                                }
+                            }
+                            // the soft glow as today's lamp warms up, settling into the steady ring
+                            .background {
+                                if day.today && lighting {
+                                    Circle()
+                                        .fill(AppTheme.tealGlow)
+                                        .padding(-10)
+                                        .blur(radius: 8)
+                                        .opacity(glowing ? 0.9 : 0)
+                                }
                             }
                             // today wears a coral ring
                             .overlay {
@@ -312,5 +346,26 @@ struct WeekLamps: View {
         .popIn(1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("This week: you tuned in \(listened) of the last 7 mornings. \(Daily.streakLine(streak))")
+        .onAppear(perform: lightUp)
+    }
+
+    /// Just after the show: once the row has popped in, today's lamp warms up with a soft glow that
+    /// settles into the steady ring. No sound, nothing to tap.
+    private func lightUp() {
+        guard lighting, !warmedUp else { return }
+        onLit()
+        if reduceMotion {
+            warmedUp = true
+            return
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.1))
+            withAnimation(.easeOut(duration: 0.6)) {
+                warmedUp = true
+                glowing = true
+            } completion: {
+                withAnimation(.easeOut(duration: 0.7)) { glowing = false }
+            }
+        }
     }
 }

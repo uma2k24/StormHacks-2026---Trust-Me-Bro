@@ -89,6 +89,8 @@ export default function Home() {
   const [uploadProblem, setUploadProblem] = useState<string | null>(null);
   // The day this page opened on: a tab left open overnight keeps the show it has.
   const [today] = useState(dayKey);
+  // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
+  const [lightLamp, setLightLamp] = useState(false);
 
   // The text size is a page-wide setting, so it lives on <html> where the CSS reads it.
   useEffect(() => {
@@ -182,6 +184,7 @@ export default function Home() {
   }, [briefing]);
   const finishRecording = useCallback(
     (captured: Captured) => {
+      if (!doneToday) setLightLamp(true);
       recordCheckIn(today, mockResults.readinessScore); // today's show is done, whatever happens next
       setAnalysis(null);
       setUploadProblem(null);
@@ -194,7 +197,7 @@ export default function Home() {
       );
       setScreen("processing");
     },
-    [today],
+    [today, doneToday],
   );
   // An uploaded recording stands in for the show. Unlike a show it only counts as today's check-in
   // once it has been measured, and a failure sends them back to choose again, not to a sample dashboard.
@@ -207,14 +210,16 @@ export default function Home() {
             setUploadProblem(outcome.status === "too-quiet" ? UPLOAD_TOO_QUIET : UPLOAD_UNAVAILABLE);
             return;
           }
+          if (!doneToday) setLightLamp(true);
           setAnalysis(outcome.analysis);
           recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true);
         }),
       );
       setScreen("processing");
     },
-    [today],
+    [today, doneToday],
   );
+  const lampLit = useCallback(() => setLightLamp(false), []);
   const openUpload = useCallback(() => {
     setUploadProblem(null);
     setScreen("upload");
@@ -263,6 +268,8 @@ export default function Home() {
               doneToday={doneToday}
               week={lastSevenDays(history, today)}
               streak={streakOf(history, today)}
+              lightToday={lightLamp}
+              onLampLit={lampLit}
               listDone={todaysList.filter((item) => ticked.includes(item.id)).length}
               listTotal={todaysList.length}
               onStart={startCheckIn}

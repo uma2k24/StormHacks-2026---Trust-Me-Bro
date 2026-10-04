@@ -57,6 +57,8 @@ export type RecordOptions = {
 export type Recorder = {
   /** While true, a pause doesn't end the answer (the person is holding the button). */
   setHeld(held: boolean): void;
+  /** How loud the microphone is right now, 0 (a quiet room) to 1 (loud talking), for the bars on screen. */
+  level(): number;
   /** Stops listening and resolves with what was recorded; the microphone is released. */
   stop(): Promise<Recording>;
   /** Stops and throws the recording away. */
@@ -72,6 +74,13 @@ const MIME_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/
  * of it: after that the show listens and replies without anyone touching the screen.
  */
 export async function primeMicrophone(): Promise<void> {
+  try {
+    // already answered, yes or no: there is nothing to ask, so Play goes straight on
+    const permission = await navigator.permissions?.query({ name: "microphone" as PermissionName });
+    if (permission && permission.state !== "prompt") return;
+  } catch {
+    // this browser can't say: ask
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((track) => track.stop());
@@ -115,6 +124,10 @@ function rawOf(chunks: Float32Array[], sampleRate: number): RawAudio | null {
 
 /** A pause shorter than this between words doesn't stop the clock on how long they have talked. */
 const VOICED_HANGOVER_MS = 300;
+
+// level(): this loud (dBFS) or quieter reads 0, this loud or louder reads 1
+const LEVEL_FLOOR_DB = -55;
+const LEVEL_FULL_DB = -15;
 
 /** Opens the microphone and starts recording. Rejects with a MicError when it can't. */
 export async function startRecording(
@@ -181,15 +194,20 @@ export async function startRecording(
   }
 
   const samples = new Float32Array(analyser?.fftSize ?? 0);
+  /** How loud the microphone is right now, in dBFS. */
+  const loudness = (meter: AnalyserNode) => {
+    meter.getFloatTimeDomainData(samples);
+    let sum = 0;
+    for (const sample of samples) sum += sample * sample;
+    return 20 * Math.log10(Math.sqrt(sum / samples.length) || 1e-8);
+  };
+
   const timer = window.setInterval(() => {
     const now = Date.now();
     const sinceTick = now - lastTickAt;
     lastTickAt = now;
     if (analyser) {
-      analyser.getFloatTimeDomainData(samples);
-      let sum = 0;
-      for (const sample of samples) sum += sample * sample;
-      const db = 20 * Math.log10(Math.sqrt(sum / samples.length) || 1e-8);
+      const db = loudness(analyser);
       if (db > SPEECH_DB) {
         if (!heardSpeech) firstLoudAt = now;
         heardSpeech = true;
@@ -227,6 +245,11 @@ export async function startRecording(
     setHeld(next) {
       held = next;
       if (!next) lastLoudAt = Date.now(); // the pause starts counting from letting go
+    },
+    level() {
+      if (!analyser || context?.state === "closed") return 0;
+      const level = (loudness(analyser) - LEVEL_FLOOR_DB) / (LEVEL_FULL_DB - LEVEL_FLOOR_DB);
+      return Math.min(1, Math.max(0, level));
     },
     stop() {
       return new Promise<Recording>((resolve) => {

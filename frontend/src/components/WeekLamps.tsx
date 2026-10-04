@@ -1,10 +1,16 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import { useEffect, useState, type CSSProperties } from "react";
 import { Check } from "lucide-react";
 import { streakLine, type WeekDay } from "@/data/daily";
 
 type WeekLampsProps = {
   week: WeekDay[];
   streak: number;
+  /** Today's show has only just been heard: today's lamp starts dark and warms up, once. */
+  lightToday?: boolean;
+  /** Told when today's lamp has started lighting, so it doesn't light up again next time. */
+  onLit?: () => void;
 };
 
 /**
@@ -12,8 +18,14 @@ type WeekLampsProps = {
  * dark for one they didn't. Kind on purpose: it celebrates the mornings that happened and never
  * scolds about the ones that didn't. Mirrors WeekLamps in IdleView.swift.
  */
-export function WeekLamps({ week, streak }: WeekLampsProps) {
+export function WeekLamps({ week, streak, lightToday = false, onLit }: WeekLampsProps) {
   const listened = week.filter((day) => day.listened).length;
+  // kept from the first render: the lamp goes on lighting after the page has been told
+  const [lighting] = useState(lightToday);
+
+  useEffect(() => {
+    if (lighting) onLit?.();
+  }, [lighting, onLit]);
 
   return (
     <div
@@ -30,6 +42,7 @@ export function WeekLamps({ week, streak }: WeekLampsProps) {
             key={day.day}
             data-listened={day.listened}
             data-today={day.today}
+            data-lighting={lighting && day.today && day.listened}
             style={{ "--n": index } as CSSProperties}
           >
             <span className="week-lamp">

@@ -12,7 +12,7 @@ type WindowProps = {
   children: ReactNode;
 };
 
-/** A 90s-desktop window: pinstriped teal title bar, close box, hard shadow. */
+/** A 90s-desktop window: pinstriped teal title bar, hard shadow. */
 export function Window({
   title,
   aside,
@@ -31,7 +31,6 @@ export function Window({
       style={{ "--i": index } as CSSProperties}
     >
       <div className="titlebar">
-        <span className="titlebar-box" aria-hidden="true" />
         <h2 id={headingId} className="titlebar-title">
           {title}
         </h2>
