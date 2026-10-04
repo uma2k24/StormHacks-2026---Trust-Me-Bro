@@ -22,6 +22,7 @@ import uvicorn
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 
+from acoustic_scores import score_acoustics
 from config import ARTIFACTS_DIR, ROOT, SAMPLE_RATE, TASK_GROUPS
 from predict import screen
 
@@ -67,7 +68,7 @@ THRESHOLD = float(cv_report["threshold"])
 RELEASE = json.loads((MODEL_DIR / "release.json").read_text()) if (MODEL_DIR / "release.json").exists() else {}
 
 
-def analyze(audio: np.ndarray) -> dict:
+def analyze(audio: np.ndarray, task: str = "speech") -> dict:
     if audio.size < SAMPLE_RATE:
         raise HTTPException(status_code=400, detail="Need at least 1 second of audio.")
     if not np.isfinite(audio).all():
@@ -83,6 +84,7 @@ def analyze(audio: np.ndarray) -> dict:
         "seconds": audio.size / SAMPLE_RATE,
         "level": rms,
         "tooQuiet": rms < 1e-3,
+        "acoustics": score_acoustics(audio, SAMPLE_RATE, task),
     }
 
 
@@ -110,7 +112,7 @@ async def post_screen(request: Request, task: str = "speech") -> dict:
     if len(body) % 4:
         raise HTTPException(status_code=400, detail="Body must be float32 samples.")
     audio = np.frombuffer(body, dtype="<f4").astype(np.float32)
-    return {"task": task, **analyze(audio)}
+    return {"task": task, **analyze(audio, task)}
 
 
 @app.post("/api/screen-file")
@@ -120,7 +122,10 @@ async def post_screen_file(file: UploadFile = File(...)) -> dict:
         audio, _ = librosa.load(io.BytesIO(await file.read()), sr=SAMPLE_RATE, mono=True)
     except Exception as exc:  # soundfile/audioread raise several unrelated types
         raise HTTPException(status_code=400, detail=f"Could not decode {file.filename}: {exc}")
-    return {"task": "file", "name": file.filename, **analyze(audio)}
+    name = file.filename or "upload"
+    # Italian vowel files start with V; treat those as the task these measures were designed for.
+    inferred = "vowel" if name.upper().startswith("V") else "file"
+    return {"task": "file", "name": name, **analyze(audio, inferred)}
 
 
 @app.post("/api/combine")

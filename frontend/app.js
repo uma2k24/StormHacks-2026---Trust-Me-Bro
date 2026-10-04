@@ -87,10 +87,65 @@ function addResultRow(list, label, result) {
   name.textContent = label;
   const value = document.createElement("span");
   value.className = "value";
-  value.textContent = `${result.probability.toFixed(3)} ${result.flagged ? "flagged" : "not flagged"}`;
+  const bits = (result.acoustics?.metrics || [])
+    .filter((m) => m.value != null)
+    .map((m) => `${m.name} ${m.display}`);
+  const extra = bits.length ? ` · ${bits.join(", ")}` : "";
+  value.textContent = `${result.probability.toFixed(3)} ${result.flagged ? "flagged" : "not flagged"}${extra}`;
   value.style.color = result.flagged ? "var(--bad)" : "var(--ok)";
   item.append(name, value);
   list.append(item);
+}
+
+function renderAcoustics(acoustics) {
+  const overall = acoustics.overall;
+  const wrap = el("acoustic-overall");
+  wrap.replaceChildren();
+  const label = document.createElement("div");
+  label.className = `score band-${overall.band}`;
+  label.textContent = overall.label;
+  const meta = document.createElement("div");
+  meta.className = "score-meta";
+  meta.textContent = overall.detail;
+  wrap.append(label, meta);
+
+  el("acoustic-note").textContent = overall.reliable
+    ? "Measured on the sustained vowel. Higher jitter and shimmer are worse. Lower HNR is worse."
+    : "Higher jitter and shimmer are worse. Lower HNR is worse. A held “aah” is the most trustworthy clip.";
+
+  el("acoustic-metrics").replaceChildren(
+    ...acoustics.metrics.map((metric) => {
+      const card = document.createElement("article");
+      card.className = "acoustic-card";
+      const marker = metric.position == null ? "" : `<div class="marker" style="left:${metric.position * 100}%"></div>`;
+      card.innerHTML = `
+        <div class="name">${metric.name}</div>
+        <div class="score band-${metric.band}">${metric.display}</div>
+        <div class="label band-${metric.band}">${metric.label}</div>
+        <div class="range">
+          <div class="zone-good" style="width:${metric.zones.green * 100}%"></div>
+          <div class="zone-warn" style="width:${metric.zones.yellow * 100}%"></div>
+          <div class="zone-bad" style="width:${metric.zones.red * 100}%"></div>
+          ${marker}
+        </div>
+        <div class="range-ends"><span>${metric.scaleLeft}</span><span>${metric.scaleRight}</span></div>
+        <div class="range-legend">
+          <span>Healthy ${metric.healthyRange}</span>
+          <span>Parkinson’s ${metric.pdRange}</span>
+        </div>
+        <p class="means">${metric.means}</p>
+      `;
+      return card;
+    }),
+  );
+}
+
+function pickAcoustics(clips) {
+  return (
+    clips.find((clip) => clip.task === "vowel" && clip.acoustics)?.acoustics ||
+    clips.find((clip) => clip.acoustics?.metrics?.some((m) => m.value != null))?.acoustics ||
+    clips.find((clip) => clip.acoustics)?.acoustics
+  );
 }
 
 async function runTask() {
@@ -123,7 +178,7 @@ async function runTask() {
     return;
   }
 
-  state.clips.push({ task: task.id, probability: result.probability });
+  state.clips.push({ task: task.id, probability: result.probability, acoustics: result.acoustics });
   addResultRow(el("task-results"), task.title, result);
   el("countdown").textContent = "";
 
@@ -158,11 +213,19 @@ async function showFinalResult() {
     ...state.clips.map((clip) => {
       const task = state.config.tasks.find((t) => t.id === clip.task);
       const row = document.createElement("div");
+      const voice = (clip.acoustics?.metrics || [])
+        .filter((m) => m.value != null)
+        .map((m) => `${m.name} ${m.display}`)
+        .join(", ");
       row.textContent =
-        `${task.title}: ${clip.probability.toFixed(3)} (weight ${(task.weight * 100).toFixed(0)}%)`;
+        `${task.title}: ${clip.probability.toFixed(3)} (weight ${(task.weight * 100).toFixed(0)}%)` +
+        (voice ? ` · ${voice}` : "");
       return row;
     }),
   );
+
+  const acoustics = pickAcoustics(state.clips);
+  if (acoustics) renderAcoustics(acoustics);
 
   const v = state.config.validation;
   el("validation").textContent =
@@ -191,7 +254,16 @@ async function scoreFiles(files) {
       list.append(failed);
       continue;
     }
-    addResultRow(list, file.name, await response.json());
+    const scored = await response.json();
+    addResultRow(list, file.name, scored);
+    if (scored.acoustics) {
+      const detail = document.createElement("li");
+      const metrics = scored.acoustics.metrics
+        .map((m) => `${m.name} ${m.display} (${m.label}; healthy ${m.healthyRange}, PD ${m.pdRange})`)
+        .join(" · ");
+      detail.textContent = metrics;
+      list.append(detail);
+    }
   }
 }
 

@@ -11,8 +11,8 @@
       <header>
         <h1>Voice check-in</h1>
         <p class="sub">
-          Three short speaking tasks. A 4-second-window CNN scores each one and returns the
-          probability that the voice shows Parkinsonian speech patterns.
+          Three short speaking tasks. A 4-second-window CNN screens for Parkinsonian speech
+          patterns, then jitter, shimmer, and harmonics-to-noise are scored from the same recording.
         </p>
         <p class="disclaimer">Research demo. Not a diagnosis and not a medical device.</p>
       </header>
@@ -45,6 +45,12 @@
         <div class="gauge"><div id="gauge-fill"></div><div id="gauge-mark" class="mark"></div></div>
         <p id="score-line" class="score-line"></p>
         <div id="breakdown" class="breakdown"></div>
+
+        <h2 class="section-title">Voice quality</h2>
+        <p id="acoustic-note" class="hint"></p>
+        <div id="acoustic-overall" class="acoustic-overall"></div>
+        <div id="acoustic-metrics" class="acoustic-grid"></div>
+
         <p id="validation" class="validation"></p>
         <button id="restart" class="secondary">Run another check-in</button>
       </section>

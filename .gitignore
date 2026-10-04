@@ -8,3 +8,4 @@ backend/parkinsons/cache/
 data/external/
 data/b2ai-voice/
 backend/parkinsons/artifacts/cv/*.txt
+*.zip
