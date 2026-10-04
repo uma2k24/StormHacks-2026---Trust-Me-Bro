@@ -6,6 +6,7 @@ import {
   type SegmentKind,
 } from "@/data/checkInScript";
 import type { InterestId, ShowProfile } from "@/data/profile";
+import { noDashes } from "@/lib/sanitize";
 
 /**
  * Server-only: builds today's morning briefing.
@@ -256,11 +257,11 @@ Write exactly three segments, in this order:
 
 Each segment has:
 - "topic": a one- or two-word label for a small screen, e.g. "Weather", "Hockey", "Garden".
-- "brief": one or two short spoken sentences, at most 35 words. Plain speech: no markdown, links, emoji or abbreviations; say numbers the way a host would ("four to two", "around six").
+- "brief": one or two short spoken sentences, at most 35 words. Plain speech: no markdown, links, emoji, dashes or abbreviations; say numbers the way a host would ("four to two", "around six").
 - "question": one friendly, open question asking for their opinion, plans or a memory, tied to the brief. It must invite at least a few sentences, so never a yes/no question that can be answered in one word. Example: "It's going to rain all afternoon. Do you think you'll still get your walk in, or will you find something cosy to do inside?"
 - "sampleReply": a natural one- or two-sentence answer the listener might give (used only for a demo).
 
-The first brief starts with "Good morning, <name>." Keep it light: skip tragedies, crime, politics and anything distressing. Never mention health, voices, recording, screening or check-ins.
+The first brief starts with "Good morning, <name>." Use their name there and nowhere else in the show. This may be their first time listening: never imply you know them already or have spoken before (no "welcome back", "again", "as usual" or "last time"). Keep it light: skip tragedies, crime, politics and anything distressing. Never mention health, voices, recording, screening or check-ins.
 
 Reply with only a JSON object, no code fences:
 {"segments":[{"kind":"weather","topic":"...","brief":"...","question":"...","sampleReply":"..."}, ...]}
@@ -351,7 +352,7 @@ function parseSegments(text: string, picks: InterestId[]): BriefingSegment[] {
     segments?: Record<string, unknown>[];
   };
   const clean = (value: unknown, max: number) =>
-    typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+    typeof value === "string" ? noDashes(value).replace(/\s+/g, " ").trim().slice(0, max) : "";
 
   // The app learns from the kind of each answered segment, so it has to be one that was asked for.
   const expected: SegmentKind[] = ["weather", ...picks];

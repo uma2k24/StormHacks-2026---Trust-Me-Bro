@@ -41,7 +41,7 @@ export const MEASURES: Record<MeasureKey, Measure> = {
     key: "jitter",
     label: "Jitter",
     description: "How much the pitch wobbles",
-    statuses: { healthy: "Steady", borderline: "A bit higher", elevated: "Higher than usual" },
+    statuses: { healthy: "Steady", borderline: "A bit higher", elevated: "Noticeably higher" },
     decimals: 2,
     unit: "%",
     scaleFrom: 0.2,
@@ -140,20 +140,24 @@ export function readinessFrom(probability: number, threshold: number): number {
 
 // ---------- words ------------------------------------------------------------
 
-const TROUBLES: Record<MeasureKey, string> = {
-  jitter: "your pitch wobbled a little more than usual",
-  shimmer: "your volume was a little uneven",
-  hnr: "your voice sounded a bit breathier",
+/** What was off, in plain words. The first morning has no earlier days to be "more than usual" against. */
+const TROUBLES: Record<MeasureKey, { first: string; later: string }> = {
+  jitter: { first: "your pitch wobbled a little", later: "your pitch wobbled a little more than usual" },
+  shimmer: { first: "your volume was a little uneven", later: "your volume was a little uneven" },
+  hnr: { first: "your voice sounded a little breathy", later: "your voice sounded a bit breathier" },
 };
 
 function joined(parts: string[]): string {
   return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
-/** The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion. */
-export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>): string {
+/**
+ * The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion. On the
+ * very first check-in (`first`) it never compares with "usual", because there is nothing yet to compare with.
+ */
+export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>, first = false): string {
   const off = MEASURE_ORDER.filter((key) => metrics[key].isWarning);
-  const trouble = joined(off.map((key) => TROUBLES[key]));
+  const trouble = joined(off.map((key) => TROUBLES[key][first ? "first" : "later"]));
   const lead = trouble ? `Today ${trouble}.` : "";
 
   if (score >= 80) {
@@ -162,23 +166,25 @@ export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>): 
       : "Your voice sounded clear and steady today. Nothing stood out, so enjoy your day.";
   }
   if (score >= 60) {
-    return `${trouble ? `${lead} ` : "Your voice sounded a little different from usual today. "}Rest, a warm drink and a glass of water may help.`;
+    const start = trouble ? lead : first ? "Your voice sounded a little tired today." : "Your voice sounded a little different from usual today.";
+    return `${start} Rest, a warm drink and a glass of water may help.`;
   }
-  return `${trouble ? `${lead} ` : ""}Your voice sounded quite different from usual today. A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor.`;
+  const state = first ? "Your voice sounded quite tired today." : "Your voice sounded quite different from usual today.";
+  return `${trouble ? `${lead} ` : ""}${state} A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor.`;
 }
 
 /**
- * Short Parkinson’s line for the overview, next to the score. Never a diagnosis — just how today’s
+ * Short Parkinson’s line for the overview, next to the score. Never a diagnosis, just how today’s
  * voice patterns compare. Mirrored in VoiceReading.parkinsonsIndication(score:).
  */
 export function parkinsonsIndication(score: number): string {
   if (score >= 80) {
-    return "You most likely don’t have Parkinson’s — today’s voice patterns look typical.";
+    return "You most likely don’t have Parkinson’s. Today’s voice patterns look typical.";
   }
   if (score >= 60) {
     return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off.";
   }
-  return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis — mention it to someone you trust or your doctor if it keeps up.";
+  return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up.";
 }
 
 /** "Borderline", and why, for the top of the details. */
@@ -247,7 +253,8 @@ export function resultsFrom(
     user,
     readinessScore: score,
     statusColor: statusColorForScore(score),
-    aiSummary: summaryFor(score, metrics),
+    // nothing earlier to compare with: the very first measured morning
+    aiSummary: summaryFor(score, metrics, earlier.length === 0),
     metrics,
     detail,
     trendData: [...earlier, { day: "Today", score }],

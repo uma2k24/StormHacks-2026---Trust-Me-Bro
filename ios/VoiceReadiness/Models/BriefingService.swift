@@ -34,7 +34,7 @@ enum BriefingService {
         guard let url = components?.url else { return nil }
 
         var request = URLRequest(url: url)
-        // writing a grounded show can take a while; the mock plays if Play is tapped first
+        // writing a grounded show can take a while; Play stays off until it arrives (or times out)
         request.timeoutInterval = 40
 
         do {

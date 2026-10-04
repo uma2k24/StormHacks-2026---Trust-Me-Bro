@@ -9,6 +9,8 @@ struct IdleView: View {
     let segments: [BriefingSegment]
     /// Today's show is done: the big button opens the day's list instead, and the week is shown.
     let doneToday: Bool
+    /// Live (or timed-out) show is ready — Play stays off until then so the mock isn't frozen in.
+    let playReady: Bool
     let week: [Daily.WeekDay]
     let streak: Int
     /// Today's show has only just been heard: today's lamp lights up as home appears (once).
@@ -50,8 +52,10 @@ struct IdleView: View {
 
                         if doneToday {
                             WeekLamps(week: week, streak: streak, lightToday: lightToday, onLit: onLampLit)
-                        } else {
+                        } else if playReady {
                             lineup
+                        } else {
+                            waitingLineup
                         }
                     }
                     .padding(.horizontal, 20)
@@ -92,29 +96,33 @@ struct IdleView: View {
             .accessibilityLabel("\(greeting), \(profile.name).")
             .accessibilityAddTraits(.isHeader)
 
-            Text(doneToday ? "You've tuned in today. Lovely!" : "Your morning radio is ready.\nTap to tune in.")
+            Text(playReady
+                   ? (doneToday ? "You've tuned in today. Lovely!" : "Your morning radio is ready.\nTap to tune in.")
+                   : "Tuning in to today's show…")
                 .font(AppFont.body(20))
                 .foregroundStyle(AppTheme.inkSoft)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.updatesFrequently)
         }
         .popIn(0)
     }
 
     private func startButton(size: CGFloat) -> some View {
         ZStack {
-            SonarRings(diameter: size)
+            if playReady { SonarRings(diameter: size) }
 
             Button(action: onStart) {
                 VStack(spacing: 6) {
                     Image(systemName: "radio.fill")
                         .font(.system(size: size * 0.29, weight: .semibold))
-                    Text("Play")
+                    Text(playReady ? "Play" : "…")
                         .font(AppFont.head(34, relativeTo: .title))
                 }
             }
-            .buttonStyle(OrbButtonStyle(size: size))
-            .accessibilityLabel("Tap to play your morning radio")
+            .buttonStyle(OrbButtonStyle(size: size, fill: playReady ? AppTheme.accent : AppTheme.tealSoft))
+            .disabled(!playReady)
+            .accessibilityLabel(playReady ? "Tap to play your morning radio" : "Getting today's show ready")
         }
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
@@ -157,7 +165,7 @@ struct IdleView: View {
                 VStack(spacing: 2) {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.system(size: small * 0.22, weight: .bold))
-                    Text("Play again")
+                    Text(playReady ? "Play again" : "Tuning in…")
                         .font(AppFont.body(15, bold: true, relativeTo: .footnote))
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
@@ -165,8 +173,9 @@ struct IdleView: View {
                         .frame(width: small * 0.72)
                 }
             }
-            .buttonStyle(OrbButtonStyle(size: small, fill: .white, shadow: 5))
-            .accessibilityLabel("Play again")
+            .buttonStyle(OrbButtonStyle(size: small, fill: playReady ? .white : AppTheme.tealSoft, shadow: 5))
+            .disabled(!playReady)
+            .accessibilityLabel(playReady ? "Play again" : "Getting today's show ready")
         }
         .padding(.trailing, 8)
         .padding(.vertical, 12)
@@ -225,6 +234,28 @@ struct IdleView: View {
         .popIn(1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("On today's show: \(topics)")
+    }
+
+    private var waitingLineup: some View {
+        let card = RoundedRectangle(cornerRadius: AppTheme.radius, style: .continuous)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("On today's show")
+                .font(AppFont.body(20, bold: true))
+                .foregroundStyle(AppTheme.inkSoft)
+            Text("Getting the lineup ready…")
+                .font(AppFont.body(18))
+                .foregroundStyle(AppTheme.inkSoft)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(card.fill(Color.white))
+        .overlay { card.stroke(AppTheme.ink, lineWidth: AppTheme.line) }
+        .hardShadow(card, offset: 5)
+        .padding(.trailing, 5)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("On today's show: getting the lineup ready")
     }
 
     private var chips: some View {

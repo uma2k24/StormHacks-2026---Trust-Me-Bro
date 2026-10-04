@@ -13,6 +13,8 @@ type IdleScreenProps = {
   segments: BriefingSegment[];
   /** Today's show is done: the big button opens the day's list instead, and the week is shown. */
   doneToday: boolean;
+  /** Live (or timed-out) show is ready — Play stays off until then so the mock isn't frozen in. */
+  playReady: boolean;
   week: WeekDay[];
   streak: number;
   /** Today's show has only just been heard: today's lamp lights up as home appears (once). */
@@ -38,6 +40,7 @@ export function IdleScreen({
   profile,
   segments,
   doneToday,
+  playReady,
   week,
   streak,
   lightToday,
@@ -50,6 +53,10 @@ export function IdleScreen({
   onOpenSettings,
 }: IdleScreenProps) {
   const allDone = listDone >= listTotal;
+  const readyLede = doneToday
+    ? "You've tuned in today. Lovely!"
+    : "Your morning radio is ready. Tap to tune in.";
+  const waitingLede = "Tuning in to today's show…";
 
   return (
     <section className="flex flex-1 flex-col items-center justify-between gap-4 text-center">
@@ -57,8 +64,8 @@ export function IdleScreen({
         <h1 className="display h1">
           {greetingFor()}, <span className="marker">{profile.name}</span>.
         </h1>
-        <p className="lede mx-auto mt-4 max-w-[22rem]">
-          {doneToday ? "You've tuned in today. Lovely!" : "Your morning radio is ready. Tap to tune in."}
+        <p className="lede mx-auto mt-4 max-w-[22rem]" aria-live="polite">
+          {playReady ? readyLede : waitingLede}
         </p>
       </header>
 
@@ -78,9 +85,15 @@ export function IdleScreen({
             </button>
           </div>
           <div className="knobs-side">
-            <button type="button" onClick={onStart} className="orb orb-sm orb-white">
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={!playReady}
+              className="orb orb-sm orb-white"
+              aria-label={playReady ? "Play again" : "Getting today's show ready"}
+            >
               <RotateCcw className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
-              <span className="orb-sm-label">Play again</span>
+              <span className="orb-sm-label">{playReady ? "Play again" : "Tuning in…"}</span>
             </button>
             <button type="button" onClick={onUpload} className="orb orb-sm orb-white" aria-label="Upload a recording instead">
               <Upload className="h-8 w-8" strokeWidth={2.75} aria-hidden="true" />
@@ -90,15 +103,17 @@ export function IdleScreen({
         </div>
       ) : (
         <div className="knobs">
-          <div className="sonar rounded-full">
+          <div className={`sonar rounded-full ${playReady ? "" : "sonar-off"}`}>
             <button
               type="button"
               onClick={onStart}
+              disabled={!playReady}
               className="orb orb-xl"
-              aria-label="Tap to play your morning radio"
+              aria-label={playReady ? "Tap to play your morning radio" : "Getting today's show ready"}
+              aria-busy={!playReady}
             >
               <Radio className="h-[4.25rem] w-[4.25rem]" strokeWidth={2.5} aria-hidden="true" />
-              <span className="display text-[2.1rem]">Play</span>
+              <span className="display text-[2.1rem]">{playReady ? "Play" : "…"}</span>
             </button>
           </div>
           <button type="button" onClick={onUpload} className="orb orb-sm orb-white" aria-label="Upload a recording instead">
@@ -110,7 +125,7 @@ export function IdleScreen({
 
       {doneToday ? (
         <WeekLamps week={week} streak={streak} lightToday={lightToday} onLit={onLampLit} />
-      ) : (
+      ) : playReady ? (
         <div
           className="stat pop-in w-full text-left"
           style={{ "--i": 1 } as CSSProperties}
@@ -128,6 +143,11 @@ export function IdleScreen({
               </span>
             ))}
           </span>
+        </div>
+      ) : (
+        <div className="stat w-full text-left" role="status" aria-live="polite">
+          <span className="text-[1.25rem] font-bold text-[var(--ink-soft)]">On today&apos;s show</span>
+          <span className="text-[1.1rem] text-[var(--ink-soft)]">Getting the lineup ready…</span>
         </div>
       )}
 

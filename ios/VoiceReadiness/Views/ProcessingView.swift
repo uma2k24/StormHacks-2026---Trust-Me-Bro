@@ -7,7 +7,7 @@ struct ProcessingView: View {
 
     private let messages = [
         "Hearing you back…",
-        "Comparing to your usual…",
+        "Comparing with typical voices…",
         "Almost there…"
     ]
 

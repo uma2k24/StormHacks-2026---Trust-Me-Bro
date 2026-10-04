@@ -164,7 +164,7 @@ Ten one-question steps: welcome → name → town → interests → extras → f
 ### Daily flow
 
 1. **Home (Idle)** — “Your morning radio is ready”, giant **Play**, what’s on today’s show, **Call [family]** and **Settings**.
-2. **Morning briefing** — After Play, the radio is hands-free: it speaks, listens when you pause, replies, and continues. Extra plain questions may run until there is enough speech; the last ask is always a sustained **“ahhh”**.
+2. **Morning briefing** — After Play, the radio is hands-free: it speaks, listens when you pause, replies, and continues. Extra questions, made up by Gemini on the spot from the news and the listener's interests, may run until there is enough speech; the last ask is always a sustained **“ahhh”**.
 3. **Processing** — Voice analysis runs on the server (`POST /api/voice/analyze`).
 4. **Results** — Four pages: readiness, voice summary, vitals, trend. Tap a vital for numbers and ranges.
 5. **Your day** — Three small tasks to tick off, plus a one-tap family message.
@@ -262,7 +262,7 @@ All routes run under the frontend dev server (`http://localhost:3000`).
 | `POST` | `/api/voice/analyze`           | ONNX classifier + jitter / shimmer / HNR |
 
 
-Voice analysis needs the model at `frontend/models/parkinson_voice_classifier.onnx` (already in the repo) and `onnxruntime-node` (installed via `npm install`).
+Voice analysis needs the model at `frontend/models/parkinson_voice_classifier_v1.onnx` (already in the repo) and `onnxruntime-node` (installed via `npm install`).
 
 ---
 

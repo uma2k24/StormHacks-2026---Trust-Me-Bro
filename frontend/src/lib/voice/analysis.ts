@@ -15,8 +15,13 @@ import { classify, WINDOW_SAMPLES } from "@/lib/voice/classifier";
  *   - The "ahhh" is also where jitter, shimmer and HNR are measured (acoustics.ts).
  */
 
-/** At or above this combined number the voice is "flagged". It is the operating point the classifier was calibrated at. */
-export const DECISION_THRESHOLD = 0.646;
+/**
+ * At or above this combined number the voice is "flagged". It is the operating point of the v1
+ * model, copied unrounded from `threshold` in the data_training branch
+ * (backend/parkinsons/artifacts/releases/v1-italian-clinic/cv_report.json). A different model file
+ * has its own threshold: change both together.
+ */
+export const DECISION_THRESHOLD = 0.6458601629247063;
 
 const TASK_WEIGHTS: Record<VoiceTaskId, number> = { vowel: 0.35, speech: 0.5 };
 

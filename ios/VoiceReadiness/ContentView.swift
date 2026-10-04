@@ -21,6 +21,11 @@ struct ContentView: View {
     @State private var today = Learning.dayKey()
     // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
     @State private var lightLamp = false
+    // Play stays off until the live show is in (or the wait times out / the request gives up).
+    @State private var briefingWaitOver = false
+
+    /// How long to hold Play for a live Gemini show before falling back to the mock.
+    private static let liveShowWaitNanoseconds: UInt64 = 22_000_000_000
 
     private var textSize: Binding<TextSizeStep> {
         Binding(
@@ -53,9 +58,13 @@ struct ContentView: View {
         return saved
     }
 
-    /// The mock plays until the live briefing arrives. It's frozen once the show starts.
+    /// Prefer the live show; mock is only used if Gemini never arrives. Frozen once Play starts.
     private var briefing: Briefing {
         todays?.briefing ?? CheckInScript.mockBriefing(for: profile ?? .demo, picks: todays?.picks)
+    }
+
+    private var playReady: Bool {
+        todays?.briefing != nil || briefingWaitOver
     }
 
     /// The mornings they've tuned in. A demo launch has no listener, so it borrows a lived-in week.
@@ -117,6 +126,7 @@ struct ContentView: View {
                             profile: profile ?? .demo,
                             segments: briefing.segments,
                             doneToday: history.days[today] != nil,
+                            playReady: playReady,
                             week: Daily.lastSevenDays(history, today: today),
                             streak: Daily.streak(history, today: today),
                             lightToday: lightLamp,
@@ -124,7 +134,13 @@ struct ContentView: View {
                             listDone: todaysList.filter { ticked.contains($0.id) }.count,
                             listTotal: todaysList.count,
                             onStart: {
-                                onAir = briefing
+                                guard playReady else { return }
+                                // The fixed show has several lines for each topic: the ones heard now are
+                                // chosen as it starts (and remembered), so a show isn't the same as the last
+                                // one. A live show is played as written.
+                                onAir = briefing.source == .mock
+                                    ? CheckInScript.mockBriefing(for: profile ?? .demo, picks: todays?.picks, rotate: FixedLines.take)
+                                    : briefing
                                 // Ask for the microphone now, so the system's question comes before the show
                                 // and never in the middle of it.
                                 Task {
@@ -179,17 +195,28 @@ struct ContentView: View {
             if todays == nil { todayJSON = plan.json }
 
             if let saved = plan.briefing {
+                briefingWaitOver = true
                 RadioVoice.shared.prefetch(saved.segments[0].brief) // so Play starts talking straight away
                 return
             }
 
+            briefingWaitOver = false
+            // Don't hold Play forever if Gemini is slow or the network is stuck.
+            let wait = Task {
+                try? await Task.sleep(nanoseconds: Self.liveShowWaitNanoseconds)
+                if !Task.isCancelled { briefingWaitOver = true }
+            }
+
             // A mock show (no Gemini key) isn't kept: it costs nothing to make again.
-            guard let fetched = await BriefingService.fetchBriefing(for: profile, picks: plan.picks),
-                  fetched.source == .live, !Task.isCancelled else { return }
-            var show = plan
-            show.briefing = fetched
-            todayJSON = show.json
-            RadioVoice.shared.prefetch(fetched.segments[0].brief)
+            if let fetched = await BriefingService.fetchBriefing(for: profile, picks: plan.picks),
+               fetched.source == .live, !Task.isCancelled {
+                var show = plan
+                show.briefing = fetched
+                todayJSON = show.json
+                RadioVoice.shared.prefetch(fetched.segments[0].brief)
+            }
+            wait.cancel()
+            if !Task.isCancelled { briefingWaitOver = true }
         }
     }
 
@@ -232,6 +259,7 @@ struct ContentView: View {
         learnedJSON = Learning.learn(
             Learned(json: learnedJSON),
             kind: segment.kind,
+            topic: segment.topic,
             engagement: Learning.engagement(of: timing),
             day: Learning.dayKey()
         ).json

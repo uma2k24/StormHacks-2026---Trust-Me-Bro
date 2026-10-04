@@ -493,8 +493,11 @@ struct AppBar: View {
         HStack(spacing: 10) {
             BrandMark().frame(width: 40, height: 40)
 
+            // set in capitals; the label stays "Morning Radio" so VoiceOver reads it naturally
             Text("Morning Radio")
-                .font(AppFont.fixedHead(21))
+                .textCase(.uppercase)
+                .accessibilityLabel("Morning Radio")
+                .font(AppFont.fixedHead(19))
                 .foregroundStyle(AppTheme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

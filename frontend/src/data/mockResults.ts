@@ -7,7 +7,7 @@ export const mockResults: ScreeningResults = {
   readinessScore: 68,
   statusColor: "yellow",
   aiSummary:
-    "Your pitch wobbles a little more than usual today, and your voice sounds a bit breathier. Rest and hydrate may help.",
+    "Your pitch wobbles a little today, and your voice sounds a bit breathy. Rest and hydrate may help.",
   metrics: {
     jitter: {
       status: "A bit higher",

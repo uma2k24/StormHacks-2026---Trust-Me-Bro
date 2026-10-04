@@ -1,8 +1,10 @@
 import Foundation
 
 /// What the radio has learned about one listener, kept on their device. Nothing here calls Gemini:
-/// learning is a little arithmetic over how the person answers, and the only thing it changes is
-/// which two interests the next show is written about.
+/// learning is a little arithmetic over how the person answers, and all it changes is which
+/// interests the radio talks about (the two the show is written about, and the one each extra
+/// question is about when more talking is needed), plus a short list of recent topics so the next
+/// question is about something new.
 ///
 /// What someone ticked in Settings stays the foundation. How they actually respond then tilts the
 /// odds: an interest they light up about comes up more, one they never respond to comes up less,
@@ -24,8 +26,19 @@ struct Learned: Codable, Equatable {
     var baseline = Taste()
     /// Keyed by `Interest.rawValue`.
     var interests: [String: Taste] = [:]
+    /// The last few things the radio asked about ("Hockey", "First job"), oldest first. Sent with a
+    /// request for a new question so it isn't a repeat.
+    var recent: [String] = []
 
     init() {}
+
+    // `recent` was added later: what was learned before it must still be read, not thrown away.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        baseline = try container.decodeIfPresent(Taste.self, forKey: .baseline) ?? Taste()
+        interests = try container.decodeIfPresent([String: Taste].self, forKey: .interests) ?? [:]
+        recent = try container.decodeIfPresent([String].self, forKey: .recent) ?? []
+    }
 
     /// Anything unreadable starts the radio off with nothing learned.
     init(json: String) {
@@ -94,6 +107,7 @@ enum Learning {
     private static let adoptN = 2.0 // answers needed before an unticked interest can become a regular...
     private static let adoptMean = 0.7 // ...and how far above their usual they must have been on average
     private static let minBaseline = 1.0 // answers needed before "above their usual" means anything
+    private static let recentTopics = 8 // topics remembered for "something new"; each costs a few tokens when sent
 
     private static func clamp01(_ value: Double) -> Double { min(1, max(0, value)) }
 
@@ -145,13 +159,23 @@ enum Learning {
         return Taste(n: n, mean: current.mean + (value - current.mean) / min(n, memory), last: day)
     }
 
+    /// The topic is remembered, newest last and without repeats; weather and the fixed "Chat"
+    /// questions say nothing worth avoiding.
+    private static func remembered(_ recent: [String], kind: SegmentKind, topic: String) -> [String] {
+        let topic = topic.trimmingCharacters(in: .whitespaces)
+        guard !topic.isEmpty, kind != .weather, kind != .chat else { return recent }
+        let others = recent.filter { $0.lowercased() != topic.lowercased() }
+        return Array((others + [topic]).suffix(recentTopics))
+    }
+
     /// Folds one answered segment into what has been learned. Every answer teaches the yardstick
     /// (how they usually answer); one about an interest also teaches how much they like that
     /// interest. Weather, and anything else that isn't one of their interests, only teaches the yardstick.
-    static func learn(_ learned: Learned, kind: SegmentKind, engagement: Double, day: String) -> Learned {
+    static func learn(_ learned: Learned, kind: SegmentKind, topic: String, engagement: Double, day: String) -> Learned {
         let usual = fresh(learned.baseline, day)
         var next = learned
         next.baseline = updated(learned.baseline, engagement, day)
+        next.recent = remembered(learned.recent, kind: kind, topic: topic)
         guard let interest = Interest(rawValue: kind.rawValue) else { return next }
 
         // Measured against how they usually answer, so a quiet person isn't taken to dislike everything
@@ -183,18 +207,42 @@ enum Learning {
 
         var picks: [Interest] = []
         while picks.count < 2, !pool.isEmpty {
-            var roll = random.next() * pool.reduce(0) { $0 + $1.weight }
-            var index = pool.count - 1
-            for (position, item) in pool.enumerated() {
-                roll -= item.weight
-                if roll < 0 {
-                    index = position
-                    break
-                }
-            }
-            picks.append(pool.remove(at: index).interest)
+            picks.append(drawOne(from: &pool, using: &random))
         }
         return picks
+    }
+
+    /// Takes one item out of the pool, at random but by weight.
+    private static func drawOne(
+        from pool: inout [(interest: Interest, weight: Double)],
+        using random: inout SeededRandom
+    ) -> Interest {
+        var roll = random.next() * pool.reduce(0) { $0 + $1.weight }
+        var index = pool.count - 1
+        for (position, item) in pool.enumerated() {
+            roll -= item.weight
+            if roll < 0 {
+                index = position
+                break
+            }
+        }
+        return pool.remove(at: index).interest
+    }
+
+    /// What the next extra question (asked when the show needs more talking) is about: an interest
+    /// the show hasn't covered yet, drawn by the same weights as the show's own picks, so what they
+    /// enjoy comes up most and the answer teaches the radio a little more about them. The app decides
+    /// this, so Gemini spends no tokens choosing. Nil only when everything has been covered.
+    /// Mirrors chooseFollowUp() on the web.
+    static func chooseFollowUp(for profile: Profile, learned: Learned, day: String, covered: [SegmentKind]) -> Interest? {
+        let chosen = Set(profile.interests)
+        var pool = Interest.allCases
+            .filter { interest in !covered.contains { $0.rawValue == interest.rawValue } }
+            .map { (interest: $0, weight: weight(of: $0, chosen: chosen, learned: learned, day: day)) }
+        guard !pool.isEmpty else { return nil }
+
+        var random = SeededRandom("\(day)|\(profile.name)|ask|\(covered.count)")
+        return drawOne(from: &pool, using: &random)
     }
 }
 

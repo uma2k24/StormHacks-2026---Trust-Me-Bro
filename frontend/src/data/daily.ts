@@ -146,11 +146,9 @@ export function reminderTask(profile: Pick<Profile, "reminder">): string {
 }
 
 /** What the radio says at the very end of the show, or null when there's nothing to remind them of. */
-export function reminderLine(profile: Pick<Profile, "name" | "reminder">): string | null {
+export function reminderLine(profile: Pick<Profile, "reminder">): string | null {
   const task = spokenTask(profile.reminder);
-  if (!task) return null;
-  const name = profile.name.trim() || "friend";
-  return `Before you go, ${name}, a little reminder: ${task}.`;
+  return task ? `Before you go, a little reminder: ${task}.` : null;
 }
 
 // ---- little things for today --------------------------------------------------------------------

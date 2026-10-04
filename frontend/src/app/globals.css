@@ -306,7 +306,10 @@ a {
 }
 .brand-name {
   min-width: 0;
-  font-size: 20px;
+  font-size: 18px;
+  /* the name is set in capitals; the text itself stays "Morning Radio" so it is read out naturally */
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1161,6 +1164,27 @@ a {
 .eq[data-live="true"] span {
   animation: none;
   transform: scaleY(0.12);
+}
+
+/* ---------- hold bar (the "ahhh") ---------------------------------------- */
+
+/* fills while the sound is held; HoldBar.tsx sets the fill's width itself */
+.hold {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 17rem);
+  height: 1.4rem;
+  padding: 3px;
+  border: 2.5px solid currentColor;
+  border-radius: 999px;
+}
+.hold-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
 }
 
 /* ---------- progress blocks (processing) -------------------------------- */

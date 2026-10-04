@@ -51,7 +51,7 @@ enum VoiceReading {
             systemImage: "waveform.path.ecg",
             healthy: "Steady",
             borderline: "A bit higher",
-            elevated: "Higher than usual",
+            elevated: "Noticeably higher",
             decimals: 2,
             unit: "%",
             scaleFrom: 0.2,
@@ -150,11 +150,12 @@ enum VoiceReading {
 
     // MARK: Words
 
-    private static func trouble(_ key: MeasureKey) -> String {
+    /// What was off, in plain words. The first morning has no earlier days to be "more than usual" against.
+    private static func trouble(_ key: MeasureKey, first: Bool) -> String {
         switch key {
-        case .jitter: return "your pitch wobbled a little more than usual"
+        case .jitter: return first ? "your pitch wobbled a little" : "your pitch wobbled a little more than usual"
         case .shimmer: return "your volume was a little uneven"
-        case .hnr: return "your voice sounded a bit breathier"
+        case .hnr: return first ? "your voice sounded a little breathy" : "your voice sounded a bit breathier"
         }
     }
 
@@ -166,9 +167,11 @@ enum VoiceReading {
         }
     }
 
-    /// The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion.
-    static func summary(score: Int, metrics: [Metric]) -> String {
-        let off = metrics.filter(\.isWarning).map { trouble($0.key) }
+    /// The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion. On the
+    /// very first check-in (`first`) it never compares with "usual", because there is nothing yet to
+    /// compare with. Mirrors summaryFor() on the web.
+    static func summary(score: Int, metrics: [Metric], first: Bool = false) -> String {
+        let off = metrics.filter(\.isWarning).map { trouble($0.key, first: first) }
         let trouble = joined(off)
         let lead = trouble.isEmpty ? "" : "Today \(trouble)."
 
@@ -178,23 +181,24 @@ enum VoiceReading {
                 : "Your voice sounded mostly clear and steady today. \(lead) Nothing to worry about."
         }
         if score >= 60 {
-            let start = trouble.isEmpty ? "Your voice sounded a little different from usual today. " : "\(lead) "
-            return "\(start)Rest, a warm drink and a glass of water may help."
+            let little = first ? "Your voice sounded a little tired today." : "Your voice sounded a little different from usual today."
+            return "\(trouble.isEmpty ? little : lead) Rest, a warm drink and a glass of water may help."
         }
         let start = trouble.isEmpty ? "" : "\(lead) "
-        return "\(start)Your voice sounded quite different from usual today. A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor."
+        let quite = first ? "Your voice sounded quite tired today." : "Your voice sounded quite different from usual today."
+        return "\(start)\(quite) A quiet morning is a good idea, and if it keeps up, mention it to someone you trust or your doctor."
     }
 
-    /// Short Parkinson’s line for the overview, next to the score. Never a diagnosis — just how
+    /// Short Parkinson’s line for the overview, next to the score. Never a diagnosis, just how
     /// today’s voice patterns compare. Mirrors parkinsonsIndication() in voiceReading.ts.
     static func parkinsonsIndication(score: Int) -> String {
         if score >= 80 {
-            return "You most likely don’t have Parkinson’s — today’s voice patterns look typical."
+            return "You most likely don’t have Parkinson’s. Today’s voice patterns look typical."
         }
         if score >= 60 {
             return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off."
         }
-        return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis — mention it to someone you trust or your doctor if it keeps up."
+        return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up."
     }
 
     /// "Borderline", and why, for the top of the details. Nil when nothing was measured.
@@ -263,7 +267,8 @@ enum VoiceReading {
             user: user,
             readinessScore: score,
             statusColor: status,
-            aiSummary: summary(score: score, metrics: metrics),
+            // nothing earlier to compare with: the very first measured morning
+            aiSummary: summary(score: score, metrics: metrics, first: earlier.isEmpty),
             metrics: metrics,
             detail: ResultDetail(
                 probability: analysis.probability,

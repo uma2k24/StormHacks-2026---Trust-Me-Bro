@@ -6,7 +6,7 @@ import { Window } from "@/components/Window";
 
 const MESSAGES = [
   "Hearing you back…",
-  "Comparing to your usual…",
+  "Comparing with typical voices…",
   "Almost there…",
 ] as const;
 

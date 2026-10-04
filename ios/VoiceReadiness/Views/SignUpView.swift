@@ -103,7 +103,7 @@ struct SignUpView: View {
                 label: "Your town or city",
                 hint: "Optional",
                 text: $draft.city,
-                placeholder: "Coquitlam, BC",
+                placeholder: "Burnaby, BC",
                 contentType: .addressCity,
                 autoFocus: true,
                 onSubmit: next
@@ -214,7 +214,7 @@ struct SignUpView: View {
     private func headlineWords(_ plain: [String], marked: [String], size: CGFloat, spoken: String) -> some View {
         CenteredFlowLayout(spacing: size * 0.26) {
             ForEach(plain, id: \.self) { word in Text(word) }
-            ForEach(marked, id: \.self) { word in Text(word).markerHighlight(size: size) }
+            ForEach(marked, id: \.self) { word in Text(word).textCase(.uppercase).markerHighlight(size: size) }
         }
         .font(AppFont.head(size, relativeTo: .largeTitle))
         .tracking(-0.9)

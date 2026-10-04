@@ -1,7 +1,9 @@
 /**
  * What the radio has learned about one listener, kept on their device. Nothing here calls Gemini:
- * learning is a little arithmetic over how the person answers, and the only thing it changes is
- * which two interests the next show is written about.
+ * learning is a little arithmetic over how the person answers, and all it changes is which
+ * interests the radio talks about (the two the show is written about, and the one each extra
+ * question is about when more talking is needed), plus a short list of recent topics so the next
+ * question is about something new.
  *
  * What someone ticked in Settings stays the foundation. How they actually respond then tilts the
  * odds: an interest they light up about comes up more, one they never respond to comes up less,
@@ -9,7 +11,7 @@
  * Mirrored in ios/VoiceReadiness/Models/Learning.swift.
  */
 
-import { type Briefing, type BriefingSegment, LISTEN_MS } from "@/data/checkInScript";
+import { type Briefing, type BriefingSegment, LISTEN_MS, type SegmentKind } from "@/data/checkInScript";
 import { INTERESTS, type InterestId, isInterestId, type Profile } from "@/data/profile";
 
 /** A running average of how much they responded, with how many answers it is based on. */
@@ -26,11 +28,14 @@ export type Learned = {
   /** How they answer anything at all: the yardstick each interest is measured against. */
   baseline: Taste;
   interests: Partial<Record<InterestId, Taste>>;
+  /** The last few things the radio asked about ("Hockey", "First job"), oldest first. Sent with a request for a new question so it isn't a repeat. */
+  recent: string[];
 };
 
 export const emptyLearned: Learned = {
   baseline: { n: 0, mean: 0.5, last: "" },
   interests: {},
+  recent: [],
 };
 
 /** What the person did on one segment, measured from their recording: timing, never what they said. */
@@ -53,6 +58,7 @@ const EXPLORE = 0.06; // odds of something they never ticked, next to 1 for what
 const ADOPT_N = 2; // answers needed before an unticked interest can become a regular...
 const ADOPT_MEAN = 0.7; // ...and how far above their usual they must have been on average
 const MIN_BASELINE = 1; // answers needed before "above their usual" means anything
+const RECENT_TOPICS = 8; // topics remembered for "something new"; each costs a few tokens when sent
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -92,6 +98,13 @@ function updated(taste: Taste | undefined, value: number, day: string): Taste {
   return { n, mean: current.mean + (value - current.mean) / Math.min(n, MEMORY), last: day };
 }
 
+/** The topic is remembered, newest last and without repeats; weather and the fixed "Chat" questions say nothing worth avoiding. */
+function remembered(recent: string[], segment: Pick<BriefingSegment, "kind" | "topic">): string[] {
+  const topic = segment.topic.trim();
+  if (!topic || segment.kind === "weather" || segment.kind === "chat") return recent;
+  return [...recent.filter((item) => item.toLowerCase() !== topic.toLowerCase()), topic].slice(-RECENT_TOPICS);
+}
+
 /**
  * Folds one answered segment into what has been learned. Every answer teaches the yardstick (how
  * they usually answer); one about an interest also teaches how much they like that interest.
@@ -99,12 +112,16 @@ function updated(taste: Taste | undefined, value: number, day: string): Taste {
  */
 export function learnFrom(
   learned: Learned,
-  segment: Pick<BriefingSegment, "kind">,
+  segment: Pick<BriefingSegment, "kind" | "topic">,
   engagement: number,
   day: string,
 ): Learned {
   const usual = fresh(learned.baseline, day);
-  const next: Learned = { ...learned, baseline: updated(learned.baseline, engagement, day) };
+  const next: Learned = {
+    ...learned,
+    baseline: updated(learned.baseline, engagement, day),
+    recent: remembered(learned.recent, segment),
+  };
   if (!isInterestId(segment.kind)) return next;
 
   // Measured against how they usually answer, so a quiet person isn't taken to dislike everything
@@ -148,13 +165,37 @@ export function chooseInterests(profile: Profile, learned: Learned, day: string)
   const pool = INTERESTS.map(({ id }) => ({ id, weight: weightOf(id, chosen, learned, day) }));
 
   const picks: InterestId[] = [];
-  while (picks.length < 2 && pool.length > 0) {
-    let roll = random() * pool.reduce((sum, item) => sum + item.weight, 0);
-    let index = pool.findIndex((item) => (roll -= item.weight) < 0);
-    if (index < 0) index = pool.length - 1;
-    picks.push(pool.splice(index, 1)[0].id);
-  }
+  while (picks.length < 2 && pool.length > 0) picks.push(drawOne(pool, random));
   return picks;
+}
+
+/** Takes one item out of the pool, at random but by weight. */
+function drawOne(pool: { id: InterestId; weight: number }[], random: () => number): InterestId {
+  let roll = random() * pool.reduce((sum, item) => sum + item.weight, 0);
+  let index = pool.findIndex((item) => (roll -= item.weight) < 0);
+  if (index < 0) index = pool.length - 1;
+  return pool.splice(index, 1)[0].id;
+}
+
+/**
+ * What the next extra question (asked when the show needs more talking) is about: an interest the
+ * show hasn't covered yet, drawn by the same weights as the show's own picks, so what they enjoy
+ * comes up most and the answer teaches the radio a little more about them. The app decides this,
+ * so Gemini spends no tokens choosing. Null only when everything has been covered.
+ */
+export function chooseFollowUp(
+  profile: Profile,
+  learned: Learned,
+  day: string,
+  covered: SegmentKind[],
+): InterestId | null {
+  const chosen = new Set(profile.interests);
+  const pool = INTERESTS.filter(({ id }) => !covered.includes(id)).map(({ id }) => ({
+    id,
+    weight: weightOf(id, chosen, learned, day),
+  }));
+  if (pool.length === 0) return null;
+  return drawOne(pool, seeded(`${day}|${profile.name}|ask|${covered.length}`));
 }
 
 /** Today's show and the choices behind it, kept so opening the app again doesn't start over. */

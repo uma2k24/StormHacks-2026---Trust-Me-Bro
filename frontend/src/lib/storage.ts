@@ -96,13 +96,17 @@ function parseTaste(value: unknown): Taste | null {
 function parseLearned(raw: string | null): Learned {
   if (!raw) return emptyLearned;
   try {
-    const data = JSON.parse(raw) as { baseline?: unknown; interests?: Record<string, unknown> };
+    const data = JSON.parse(raw) as { baseline?: unknown; interests?: Record<string, unknown>; recent?: unknown };
     const interests: Learned["interests"] = {};
     for (const [id, value] of Object.entries(data.interests ?? {})) {
       const taste = parseTaste(value);
       if (isInterestId(id) && taste) interests[id] = taste;
     }
-    return { baseline: parseTaste(data.baseline) ?? emptyLearned.baseline, interests };
+    // added later: what was learned before it simply has no recent topics
+    const recent = Array.isArray(data.recent)
+      ? data.recent.filter((topic): topic is string => typeof topic === "string")
+      : [];
+    return { baseline: parseTaste(data.baseline) ?? emptyLearned.baseline, interests, recent };
   } catch {
     return emptyLearned;
   }
@@ -160,6 +164,22 @@ const talkSpeedStore = createStore<TalkSpeed>("voice-readiness:talk-speed", (raw
 const learnedStore = createStore("voice-readiness:learned", parseLearned);
 const showStore = createStore("voice-readiness:today", parseTodaysShow);
 const historyStore = createStore("voice-readiness:history", parseHistory);
+
+/** How many times each pool of fixed lines has been used (see Rotate in data/checkInScript.ts). */
+function parseFixedCounts(raw: string | null): Record<string, number> {
+  if (!raw) return {};
+  try {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(data).filter(
+        (entry): entry is [string, number] => typeof entry[1] === "number" && Number.isInteger(entry[1]) && entry[1] >= 0,
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+const fixedStore = createStore("voice-readiness:fixed-lines", parseFixedCounts);
 
 /** undefined until the browser has been asked, null when nobody has signed up yet. */
 export function useProfile(): Profile | null | undefined {
@@ -260,4 +280,16 @@ export function toggleDone(day: string, id: string) {
   if (!record) return;
   const done = record.done.includes(id) ? record.done.filter((item) => item !== id) : [...record.done, id];
   saveHistory({ ...history, [day]: { ...record, done } });
+}
+
+/**
+ * Which of a pool of fixed lines to use next, 0...size-1, and the pool moves on: the lines the radio
+ * falls back on when Gemini can't write them are used in turn, so one isn't heard again until the rest
+ * have been. This is a Rotate (data/checkInScript.ts).
+ */
+export function takeFixedLine(pool: string, size: number): number {
+  const counts = fixedStore.getSnapshot();
+  const used = counts[pool] ?? 0;
+  fixedStore.write(JSON.stringify({ ...counts, [pool]: used + 1 }));
+  return used % size;
 }

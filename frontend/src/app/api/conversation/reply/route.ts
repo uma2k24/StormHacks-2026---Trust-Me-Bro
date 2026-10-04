@@ -1,6 +1,6 @@
-import { INTERESTS, type ShowProfile } from "@/data/profile";
+import { INTERESTS, isInterestId, type ShowProfile } from "@/data/profile";
 import type { SegmentKind } from "@/data/checkInScript";
-import { replyTo } from "@/lib/conversation";
+import { type FollowUpRequest, replyTo } from "@/lib/conversation";
 import { clean, cleanName, cleanSpeech, interestList } from "@/lib/sanitize";
 
 /**
@@ -10,11 +10,14 @@ import { clean, cleanName, cleanSpeech, interestList } from "@/lib/sanitize";
  *     "segment": { "kind": "sports", "topic": "Sports", "brief": "...", "question": "..." },
  *     "transcript": "what they said",
  *     "earlier": [{ "topic": "Weather", "said": "..." }],
- *     "index": 1, "last": false
+ *     "index": 1, "last": false,
+ *     "followUp": { "focus": "music", "avoid": ["Hockey"], "asked": 0 }   (only when more talking is needed)
  *   }
- *   ->  { "text": "the host's reply", "source": "live" | "fallback" }
+ *   ->  { "text": "the host's reply", "source": "live" | "fallback",
+ *         "next": { "topic": "...", "brief": "...", "question": "..." } }   (next: only with followUp, and only if written)
  * Gemini writes the host's reply to what the listener said (see lib/conversation.ts). It always
  * answers: when Gemini isn't available the reply is a fixed warm line and `source` says so.
+ * With `followUp` the same request also writes the next question, about the `focus` interest.
  */
 
 const SEGMENT_KINDS = new Set<string>(["weather", "news", ...INTERESTS.map(({ id }) => id)]);
@@ -47,6 +50,19 @@ export async function POST(request: Request) {
     .map((turn) => ({ topic: cleanSpeech(turn.topic, 24), said: cleanSpeech(turn.said, 200) }))
     .filter((turn) => turn.said);
 
+  // asking for the next question needs a known interest to ask about; anything else is just a reply
+  const followUp: FollowUpRequest | undefined =
+    isObject(body.followUp) && isInterestId(body.followUp.focus)
+      ? {
+          focus: body.followUp.focus,
+          avoid: (Array.isArray(body.followUp.avoid) ? body.followUp.avoid : [])
+            .slice(-8)
+            .map((topic) => cleanSpeech(topic, 24))
+            .filter(Boolean),
+          asked: Math.max(0, Math.min(10, Number(body.followUp.asked) || 0)),
+        }
+      : undefined;
+
   const reply = await replyTo({
     profile,
     segment: {
@@ -59,6 +75,7 @@ export async function POST(request: Request) {
     earlier,
     index: Math.max(0, Math.min(10, Number(body.index) || 0)),
     last: body.last === true,
+    followUp,
   });
 
   return Response.json(reply, { headers: { "Cache-Control": "no-store" } });

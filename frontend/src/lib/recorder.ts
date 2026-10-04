@@ -59,6 +59,8 @@ export type Recorder = {
   setHeld(held: boolean): void;
   /** How loud the microphone is right now, 0 (a quiet room) to 1 (loud talking), for the bars on screen. */
   level(): number;
+  /** How long they have really been talking so far (pauses not counted), for the bar that shows how long to hold the "ahhh". */
+  voicedMs(): number;
   /** Stops listening and resolves with what was recorded; the microphone is released. */
   stop(): Promise<Recording>;
   /** Stops and throws the recording away. */
@@ -250,6 +252,9 @@ export async function startRecording(
       if (!analyser || context?.state === "closed") return 0;
       const level = (loudness(analyser) - LEVEL_FLOOR_DB) / (LEVEL_FULL_DB - LEVEL_FLOOR_DB);
       return Math.min(1, Math.max(0, level));
+    },
+    voicedMs() {
+      return voicedMs;
     },
     stop() {
       return new Promise<Recording>((resolve) => {

@@ -24,6 +24,18 @@ export function cleanSpeech(value: unknown, max: number): string {
     .slice(0, max);
 }
 
+/**
+ * The show never writes dashes in what it says: Gemini likes an em dash, so one (or an en dash, a double
+ * hyphen, or a hyphen with spaces round it) becomes a comma, and a range of numbers reads "to".
+ */
+export function noDashes(text: string): string {
+  return text
+    .replace(/(\d)\s*[\u2013\u2014]\s*(\d)/g, "$1 to $2")
+    .replace(/\s*(?:[\u2013\u2014]|--)\s*|\s+-\s+/g, ", ")
+    .replace(/,\s*([,.!?])/g, "$1")
+    .replace(/^\s*,\s*|\s*,\s*$/g, "");
+}
+
 /** "sports,garden,sports" -> ["sports", "garden"]: known interests only, no repeats. */
 export function interestList(value: string | string[] | null | undefined, max: number): InterestId[] {
   const ids = Array.isArray(value) ? value : (value ?? "").split(",");

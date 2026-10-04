@@ -149,8 +149,7 @@ enum Daily {
     static func reminderLine(_ profile: Profile) -> String? {
         let task = spokenTask(profile.reminder)
         guard !task.isEmpty else { return nil }
-        let name = profile.name.trimmingCharacters(in: .whitespaces)
-        return "Before you go, \(name.isEmpty ? "friend" : name), a little reminder: \(task)."
+        return "Before you go, a little reminder: \(task)."
     }
 
     // MARK: Little things for today

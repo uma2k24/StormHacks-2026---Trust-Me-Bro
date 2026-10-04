@@ -20,9 +20,14 @@ import SwiftUI
 /// the host's reply (with a light fun fact or news for what you're into). Without a microphone, a key
 /// or a backend it falls back to a sample answer after a moment, so the show still plays.
 ///
-/// The answers are also what the voice analysis listens to, so the show keeps asking plain questions
-/// (`chat` turns, no Gemini) after the last briefing segment until enough talking has been heard, and
-/// always ends with the sustained "ahhh" (the `vowel` turn): jitter, shimmer and HNR are measured on it.
+/// The answers are also what the voice analysis listens to, so the show keeps asking questions after
+/// the last briefing segment until enough talking has been heard. Those are made up on the spot: when
+/// more is needed, Gemini writes the next question inside the same request as its reply to the answer
+/// before (about an interest the app picks from what the listener enjoys, see
+/// `Learning.chooseFollowUp`), so a question costs no request of its own. Only if it can't (no key,
+/// an error) are the fixed `chat` questions asked. The show always ends with the sustained "ahhh"
+/// (the `vowel` turn): jitter, shimmer and HNR are measured on it,
+/// and a bar under the screen fills as it is held, so they can see how long is left.
 /// Everything that was recorded is handed to `onComplete`.
 /// Mirrors ActiveScreen.tsx on the web.
 private enum Phase {
@@ -76,6 +81,8 @@ struct RecordingView: View {
     @State private var captured = CapturedVoice()
     @State private var talked: TimeInterval = 0
     @State private var extrasAsked = 0
+    // the next question, once Gemini has written it with its last reply; asked when the show needs more talking
+    @State private var upNext: BriefingSegment?
     @State private var vowelTries = 0
     // the last question went unanswered twice: more questions won't help
     @State private var gaveUp = false
@@ -266,6 +273,13 @@ struct RecordingView: View {
             )
             .id("\(waveformActive)-\(phase == .listening)")
             .foregroundStyle(screenColor)
+
+            // the "ahhh" stops by itself once it has been held long enough: this shows how far along it is
+            if phase == .listening, turn.kind == .vowel {
+                HoldBarView(target: CheckInScript.vowelTarget, held: { recorder?.voicedSoFar ?? 0 })
+                    .foregroundStyle(screenColor)
+                    .transition(.opacity)
+            }
         }
         .opacity(tunedIn ? 1 : 0)
         .blur(radius: tunedIn ? 0 : 4)
@@ -383,7 +397,7 @@ struct RecordingView: View {
             )
             .sensoryFeedback(.impact(weight: .heavy), trigger: phase)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(phase == .listening ? "Done talking — send my answer" : "Talk — answer with your voice")
+            .accessibilityLabel(phase == .listening ? "Done talking, send my answer" : "Talk, answer with your voice")
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { handleAccessibilityActivate() }
         }
@@ -444,7 +458,7 @@ struct RecordingView: View {
         // warm up the next segment while this one plays (after the last one, the "ahhh")
         let upcoming = turns.indices.contains(turnIndex + 1)
             ? turns[turnIndex + 1]
-            : (turnIndex == segments.count - 1 ? CheckInScript.vowelTurn(for: profile.name) : nil)
+            : (turnIndex == segments.count - 1 ? CheckInScript.vowelTurn() : nil)
         if let upcoming {
             voice.prefetch(upcoming.brief)
             voice.prefetch(upcoming.question)
@@ -492,6 +506,11 @@ struct RecordingView: View {
         }
     }
 
+    /// Less than `minSpeech` of talking has been heard so far (and they haven't left the last question unanswered).
+    private var needsMore: Bool {
+        !gaveUp && talked < CheckInScript.minSpeech && extrasAsked < CheckInScript.maxExtraQuestions
+    }
+
     /// Moves to the next turn, which may have to be made up: another question, or the "ahhh".
     private func advance() {
         let next = turnIndex + 1
@@ -501,12 +520,14 @@ struct RecordingView: View {
                 closeShow()
                 return
             }
-            let needMore = !gaveUp && talked < CheckInScript.minSpeech && extrasAsked < CheckInScript.maxExtraQuestions
-            if needMore, let extra = CheckInScript.extraTurn(extrasAsked, for: profile.name) {
+            // another question when more talking is needed: the one Gemini wrote with its last reply or, if it couldn't, a fixed one
+            let extra = needsMore ? (upNext ?? CheckInScript.extraTurn(extrasAsked, rotate: FixedLines.take)) : nil
+            upNext = nil
+            if let extra {
                 extrasAsked += 1
                 extraTurns.append(extra)
             } else {
-                extraTurns.append(CheckInScript.vowelTurn(for: profile.name))
+                extraTurns.append(CheckInScript.vowelTurn())
             }
         }
         turnIndex = next
@@ -682,25 +703,51 @@ struct RecordingView: View {
             setPhase(.heard)
             onAnswer(segment, timing)
 
+            // If this answer still isn't enough talking and no question is lined up, the same request that
+            // writes the reply also writes the next question: about an interest the app picks from what they
+            // enjoy. Only the first question of a show can search the news (see lib/conversation.ts on the web).
+            let asking = needsMore && index + 1 >= turns.count
+            // what was learned is stored under the same key ContentView keeps it in
+            let learned = asking ? Learned(json: UserDefaults.standard.string(forKey: "learned") ?? "") : Learned()
+            let focus = asking
+                ? Learning.chooseFollowUp(for: profile, learned: learned, day: Learning.dayKey(), covered: turns.map(\.kind))
+                : nil
+            let followUp = focus.map {
+                ConversationService.FollowUpRequest(focus: $0.rawValue, avoid: learned.recent, asked: extrasAsked)
+            }
+            upNext = nil
+
             // Their words stay up for a moment at least. The reply (and its voice) is ready before the screen changes.
-            // Only the briefing's own segments get a reply written by Gemini; an extra question gets a fixed warm line.
-            async let writing: String = {
-                let written: String? = segment.kind == .chat
-                    ? nil
-                    : await ConversationService.reply(
+            // Gemini writes the reply for the briefing's own segments and for the questions it made up; the last
+            // answer before the "ahhh", and the fixed fallback questions, get a fixed warm line (no request).
+            async let writing: (text: String, next: FollowUp?) = {
+                var written: ConversationService.HostReply?
+                if segment.kind != .chat, index < segments.count || followUp != nil {
+                    written = await ConversationService.reply(
                         profile: profile,
                         segment: segment,
                         transcript: words,
                         earlier: earlier,
                         index: index,
-                        last: false
+                        last: false,
+                        followUp: followUp
                     )
-                let text = written ?? CheckInScript.fallbackReply(for: profile.name, segmentIndex: index, last: false)
+                }
+                // the server's own fixed line is dropped for one from this device's rotation, so they take turns
+                let text = written.flatMap { $0.isFallback ? nil : $0.text }
+                    ?? CheckInScript.fallbackReply(rotate: FixedLines.take)
                 await RadioVoice.shared.prepare(text)
-                return text
+                return (text, written?.next)
             }()
             async let pause: Void = Task.sleep(for: CheckInScript.acknowledgePause)
-            let reply = await writing
+            let (reply, written) = await writing
+            if let focus, let written {
+                // made up on the spot: its voices are fetched while the reply plays, so the next question starts at once
+                let made = CheckInScript.followUpTurn(written, focus: focus, index: extrasAsked)
+                upNext = made
+                RadioVoice.shared.prefetch(made.brief)
+                RadioVoice.shared.prefetch(made.question)
+            }
             _ = try? await pause
             guard !Task.isCancelled else { return }
 

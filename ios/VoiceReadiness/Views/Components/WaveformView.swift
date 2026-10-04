@@ -77,3 +77,43 @@ struct WaveformView: View {
         }
     }
 }
+
+/// A bar that fills while the "ahhh" is held: empty when it starts, full when it is long enough, at
+/// which point the radio carries on by itself. It follows the time actually spent making the sound, so
+/// a pause for breath holds it still instead of running on. Colour follows the parent's foreground
+/// style. Mirrors HoldBar.tsx.
+struct HoldBarView: View {
+    /// How long the voice has to be held for the bar to be full.
+    let target: TimeInterval
+    /// How long the voice has been held so far (pauses not counted): what the bar fills with.
+    let held: @MainActor () -> TimeInterval
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown: Double = 0
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Capsule().strokeBorder(lineWidth: 2.5)
+
+            GeometryReader { box in
+                Capsule().frame(width: box.size.width * shown)
+            }
+            .padding(5.5)
+        }
+        .frame(maxWidth: 272)
+        .frame(height: 22)
+        .animation(reduceMotion ? nil : .linear(duration: 1 / 30), value: shown)
+        .task { await follow() }
+        .accessibilityHidden(true)
+    }
+
+    /// Reads the recorder thirty times a second. It counts in tenths of a second, so the bar eases
+    /// between them to glide (not when motion is reduced).
+    private func follow() async {
+        while !Task.isCancelled {
+            let goal = min(1, max(0, held() / target))
+            shown = reduceMotion ? goal : shown + (goal - shown) * 0.2
+            try? await Task.sleep(for: .milliseconds(33))
+        }
+    }
+}

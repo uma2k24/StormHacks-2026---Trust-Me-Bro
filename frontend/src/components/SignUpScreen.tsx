@@ -74,7 +74,7 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
             </div>
             <header className="pop-in" style={{ "--i": 1 } as CSSProperties}>
               <h1 className="display h1">
-                Welcome to <span className="marker">Morning Radio</span>
+                Welcome to <span className="marker uppercase">Morning Radio</span>
               </h1>
               <p className="lede mx-auto mt-5 max-w-[24rem]">
                 Let&apos;s set up your own morning show. It only takes a minute.
@@ -121,7 +121,7 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
                 hint="Optional"
                 value={draft.city}
                 onChange={(city) => update({ city })}
-                placeholder="Coquitlam, BC"
+                placeholder="Burnaby, BC"
                 autoComplete="address-level2"
                 autoFocus
                 onEnter={next}

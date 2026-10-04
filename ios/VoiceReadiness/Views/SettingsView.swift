@@ -53,7 +53,7 @@ struct SettingsView: View {
                                 label: "Your town or city",
                                 hint: "For your weather and local news",
                                 text: $draft.city,
-                                placeholder: "Coquitlam, BC",
+                                placeholder: "Burnaby, BC",
                                 contentType: .addressCity,
                                 submitLabel: .done
                             )

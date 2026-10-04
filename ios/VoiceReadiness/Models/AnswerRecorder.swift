@@ -58,6 +58,10 @@ final class AnswerRecorder {
         return min(1, max(0, level))
     }
 
+    /// How long they have really been talking so far (pauses not counted), for the bar that shows how
+    /// long to hold the "ahhh".
+    var voicedSoFar: TimeInterval { voiced }
+
     /// A pause shorter than this between words doesn't stop the clock on how long they have talked.
     private static let voicedHangover: TimeInterval = 0.3
     // level: this loud (dBFS) or quieter reads 0, this loud or louder reads 1 (as in recorder.ts)

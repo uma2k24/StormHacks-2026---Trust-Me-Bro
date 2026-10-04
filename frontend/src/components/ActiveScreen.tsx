@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { BellRing, Mic } from "lucide-react";
+import { HoldBar } from "@/components/HoldBar";
 import { SegmentIcon } from "@/components/SegmentIcon";
 import { Waveform } from "@/components/Waveform";
 import {
@@ -11,6 +12,7 @@ import {
   type BriefingSegment,
   extraTurn,
   fallbackReply,
+  followUpTurn,
   GIVE_UP_LINE,
   HANDS_FREE_GAP_MS,
   LISTEN_MS,
@@ -32,11 +34,12 @@ import {
   wordsSpoken,
 } from "@/data/checkInScript";
 import { reminderLine } from "@/data/daily";
-import type { AnswerTiming } from "@/data/learning";
+import { type AnswerTiming, chooseFollowUp, dayKey } from "@/data/learning";
 import type { Profile } from "@/data/profile";
 import { fetchReply, transcribeAnswer } from "@/lib/conversationClient";
 import { prefetchClip, prepareClip, speak, wait } from "@/lib/radioVoice";
 import { MicError, type Recorder, type Recording, startRecording } from "@/lib/recorder";
+import { loadLearned, takeFixedLine } from "@/lib/storage";
 import type { Captured } from "@/lib/voiceClient";
 
 /**
@@ -60,10 +63,14 @@ import type { Captured } from "@/lib/voiceClient";
  * the host's reply (with a light fun fact or news for what you're into). Without a microphone,
  * a key or a backend it falls back to a sample answer after a moment, so the show still plays.
  *
- * The answers are also what the voice analysis listens to, so the show keeps asking plain questions
- * ("chat" turns, no Gemini) after the last briefing segment until enough talking has been heard, and
- * always ends with the sustained "ahhh" (the "vowel" turn): the jitter, shimmer and HNR are measured
- * on it. Everything that was recorded is handed to onComplete.
+ * The answers are also what the voice analysis listens to, so the show keeps asking questions after
+ * the last briefing segment until enough talking has been heard. Those are made up on the spot: when
+ * more is needed, Gemini writes the next question inside the same request as its reply to the answer
+ * before (about an interest the app picks from what the listener enjoys, see chooseFollowUp), so a
+ * question costs no request of its own. Only if it can't (no key, an error) are the fixed "chat"
+ * questions asked. The show always ends with the sustained "ahhh" (the "vowel" turn): the jitter, shimmer and HNR are measured
+ * on it, and a bar under the screen fills as it is held, so they can see how long is left.
+ * Everything that was recorded is handed to onComplete.
  * Mirrored in ios/VoiceReadiness/Views/RecordingView.swift.
  */
 type Phase =
@@ -156,6 +163,8 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   const captured = useRef<Captured>({ speech: [], vowel: null });
   const talkedMs = useRef(0);
   const extrasAsked = useRef(0);
+  // the next question, once Gemini has written it with its last reply; asked when the show needs more talking
+  const upNext = useRef<BriefingSegment | null>(null);
   const vowelTries = useRef(0);
   // the last question went unanswered twice: more questions won't help
   const gaveUp = useRef(false);
@@ -194,6 +203,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   /** How loud the open microphone is (0...1): what the bars follow while it listens. */
   const micLevel = useCallback(() => openMic.current?.level() ?? 0, []);
 
+  /** How long the "ahhh" has been held so far: what the bar under the screen fills with. */
+  const heldMs = useCallback(() => openMic.current?.voicedMs() ?? 0, []);
+
   // Each segment: read the brief, ask the question, then open the microphone by itself.
   useEffect(() => {
     const segment = turnsRef.current[turnIndex];
@@ -205,7 +217,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     prefetchClip(segment.brief);
     prefetchClip(segment.question);
     // warm up the next segment while this one plays (after the last one, the "ahhh")
-    const upcoming = turnsRef.current[turnIndex + 1] ?? (turnIndex === segments.length - 1 ? vowelTurn(profile.name) : undefined);
+    const upcoming = turnsRef.current[turnIndex + 1] ?? (turnIndex === segments.length - 1 ? vowelTurn() : undefined);
     if (upcoming) {
       prefetchClip(upcoming.brief);
       prefetchClip(upcoming.question);
@@ -294,13 +306,18 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     if (!signal.aborted) onComplete(captured.current);
   };
 
+  /** Less than MIN_SPEECH_MS of talking has been heard so far (and they haven't left the last question unanswered). */
+  const needsMore = () =>
+    !gaveUp.current && talkedMs.current < MIN_SPEECH_MS && extrasAsked.current < MAX_EXTRA_QUESTIONS;
+
   /**
-   * Another plain question, when less than MIN_SPEECH_MS of talking has been heard so far (and they
-   * haven't left the last one unanswered); null when there's enough, or no more questions to ask.
+   * Another question, when more talking is needed: the one Gemini wrote with its last reply or, if it
+   * couldn't, a fixed one. Null when there's enough, or no more questions to ask.
    */
   const moreToSay = () => {
-    if (gaveUp.current || talkedMs.current >= MIN_SPEECH_MS || extrasAsked.current >= MAX_EXTRA_QUESTIONS) return null;
-    const extra = extraTurn(extrasAsked.current, profile.name);
+    if (!needsMore()) return null;
+    const extra = upNext.current ?? extraTurn(extrasAsked.current, takeFixedLine);
+    upNext.current = null;
     if (extra) extrasAsked.current += 1;
     return extra;
   };
@@ -311,7 +328,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     if (next >= turnsRef.current.length) {
       // with no microphone there is nothing to measure, so no "ahhh"
       const following =
-        turn.kind === "vowel" || sample.current ? null : (moreToSay() ?? vowelTurn(profile.name));
+        turn.kind === "vowel" || sample.current ? null : (moreToSay() ?? vowelTurn());
       if (!following) {
         void closeShow();
         return;
@@ -443,17 +460,35 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     setPhase("heard");
     onAnswer(segment, timing);
 
+    // If this answer still isn't enough talking and no question is lined up, the same request that writes
+    // the reply also writes the next question: about an interest the app picks from what they enjoy.
+    // Only the first question of a show can search the news (see lib/conversation.ts).
+    const askNext = needsMore() && index + 1 >= turnsRef.current.length;
+    const learned = askNext ? loadLearned() : null;
+    const focus = learned ? chooseFollowUp(profile, learned, dayKey(), turnsRef.current.map(({ kind }) => kind)) : null;
+    const followUp = learned && focus ? { focus, avoid: learned.recent, asked: extrasAsked.current } : undefined;
+    upNext.current = null;
+
     // Their words stay up for a moment at least. The reply (and its voice) is ready before the screen changes.
-    // Only the briefing's own segments get a reply written by Gemini; an extra question gets a fixed warm line.
+    // Gemini writes the reply for the briefing's own segments and for the questions it made up; the last
+    // answer before the "ahhh", and the fixed fallback questions, get a fixed warm line (no request).
     const reply = (async () => {
       const written =
-        segment.kind === "chat"
+        segment.kind === "chat" || (index >= segments.length && !followUp)
           ? null
           : await fetchReply(
-              { profile, segment, transcript: heard.text, earlier: earlier.current, index, last: false },
+              { profile, segment, transcript: heard.text, earlier: earlier.current, index, last: false, followUp },
               signal,
             );
-      const text = written ?? fallbackReply(profile.name, index, false);
+      // the server's own fixed line is dropped for one from this device's rotation, so they take turns
+      const text = written?.source === "live" ? written.text : fallbackReply(false, takeFixedLine);
+      if (followUp && written?.next) {
+        // made up on the spot: its voices are fetched while the reply plays, so the next question starts at once
+        const made = followUpTurn(written.next, followUp.focus, extrasAsked.current);
+        upNext.current = made;
+        prefetchClip(made.brief);
+        prefetchClip(made.question);
+      }
       await prepareClip(text, signal);
       return text;
     })();
@@ -685,6 +720,10 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
             // while it listens the bars follow the microphone: flat in a quiet room, rising as they talk
             level={phase === "listening" ? micLevel : undefined}
           />
+          {/* the "ahhh" stops by itself once it has been held long enough: this shows how far along it is */}
+          {phase === "listening" && turn.kind === "vowel" ? (
+            <HoldBar targetMs={VOWEL_TARGET_MS} heldMs={heldMs} />
+          ) : null}
         </div>
 
         <div className="radio-controls">
@@ -702,7 +741,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
               disabled={!canPress}
               className={`orb orb-lg ${phase === "listening" ? "orb-down" : ""}`}
               aria-label={
-                phase === "listening" ? "Done talking — send my answer" : "Talk — answer with your voice"
+                phase === "listening" ? "Done talking, send my answer" : "Talk, answer with your voice"
               }
             >
               <Mic className="h-9 w-9" strokeWidth={2.5} aria-hidden="true" />

@@ -35,6 +35,7 @@ import {
   saveLearned,
   saveProfile,
   saveTodaysShow,
+  takeFixedLine,
   toggleDone,
   useHistory,
   useProfile,
@@ -64,6 +65,9 @@ function launchFrom(search: string): Launch {
 
 const neverChanges = () => () => {};
 
+// How long to hold Play for a live Gemini show before falling back to the mock.
+const LIVE_SHOW_WAIT_MS = 22_000;
+
 // What the upload screen says when the voice couldn't be checked (a show that can't be measured just shows a sample).
 const UPLOAD_TOO_QUIET = "I couldn’t hear enough of a voice in that. Please try a longer or louder recording.";
 const UPLOAD_UNAVAILABLE = "I couldn’t check that just now. Please try again in a moment.";
@@ -91,6 +95,8 @@ export default function Home() {
   const [today] = useState(dayKey);
   // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
   const [lightLamp, setLightLamp] = useState(false);
+  // Play stays off until the live show is in (or the wait times out / the request gives up).
+  const [briefingWaitOver, setBriefingWaitOver] = useState(false);
 
   // The text size is a page-wide setting, so it lives on <html> where the CSS reads it.
   useEffect(() => {
@@ -102,9 +108,10 @@ export default function Home() {
   const key = profile ? profileKey(profile) : null;
   // Today's show for this profile, kept on the device so it is only ever asked for once a day.
   const todays = useTodaysShow(key, today);
-  // The mock plays until the live briefing arrives. It's frozen once the show starts.
+  // Prefer the live show; mock is only used if Gemini never arrives. Frozen once Play starts.
   const briefing: Briefing =
     todays?.briefing ?? mockBriefingFor(profile ?? demoProfile, todays?.picks);
+  const playReady = Boolean(todays?.briefing) || briefingWaitOver;
 
   // The mornings they've tuned in. A demo link has no listener, so it borrows a lived-in week.
   const history = stored ? savedHistory : { ...demoHistory(today), ...savedHistory };
@@ -137,9 +144,12 @@ export default function Home() {
     if (!saved) saveTodaysShow(plan);
 
     if (plan.briefing) {
+      setBriefingWaitOver(true);
       prefetchClip(plan.briefing.segments[0].brief); // so Play starts talking straight away
       return;
     }
+
+    setBriefingWaitOver(false);
 
     const params = new URLSearchParams({
       name: profile.name,
@@ -149,18 +159,32 @@ export default function Home() {
       picks: plan.picks.join(","),
     });
     const controller = new AbortController();
+    // Don't hold Play forever if Gemini is slow or the network is stuck.
+    const timeout = window.setTimeout(() => setBriefingWaitOver(true), LIVE_SHOW_WAIT_MS);
+    const unlock = () => {
+      window.clearTimeout(timeout);
+      setBriefingWaitOver(true);
+    };
+
     fetch(`/api/briefing?${params}`, { signal: controller.signal })
       .then((response) => (response.ok ? (response.json() as Promise<Briefing>) : null))
       .then((data) => {
         // A mock show (no Gemini key) isn't kept: it costs nothing to make again.
-        if (data?.source !== "live" || !data.segments?.length) return;
-        saveTodaysShow({ ...plan, briefing: data });
-        prefetchClip(data.segments[0].brief);
+        if (data?.source === "live" && data.segments?.length) {
+          saveTodaysShow({ ...plan, briefing: data });
+          prefetchClip(data.segments[0].brief);
+        }
       })
       .catch(() => {
         // offline or no backend: the mock show is fine
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) unlock();
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
     // key stands for every field of the profile that shapes the show
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
@@ -175,13 +199,18 @@ export default function Home() {
   );
 
   const startCheckIn = useCallback(async () => {
+    if (!playReady) return;
     unlockRadioVoice(); // inside the tap, so the browser lets the radio speak
-    setOnAir(briefing);
+    // The fixed show has several lines for each topic: the ones heard now are chosen as it starts (and
+    // remembered), so a show isn't the same as the last one. A live show is played as written.
+    setOnAir(
+      briefing.source === "mock" ? mockBriefingFor(profile ?? demoProfile, todays?.picks, takeFixedLine) : briefing,
+    );
     // Ask for the microphone now, so the browser's question comes before the show and never in the
     // middle of it. (If it is left unanswered the show starts anyway, and says so when it needs to listen.)
     await Promise.race([primeMicrophone(), new Promise((resolve) => window.setTimeout(resolve, 15000))]);
     setScreen("recording");
-  }, [briefing]);
+  }, [briefing, playReady, profile, todays?.picks]);
   const finishRecording = useCallback(
     (captured: Captured) => {
       if (!doneToday) setLightLamp(true);
@@ -266,6 +295,7 @@ export default function Home() {
               profile={profile}
               segments={briefing.segments}
               doneToday={doneToday}
+              playReady={playReady}
               week={lastSevenDays(history, today)}
               streak={streakOf(history, today)}
               lightToday={lightLamp}

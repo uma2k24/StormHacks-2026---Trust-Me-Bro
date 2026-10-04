@@ -66,7 +66,7 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
               hint="For your weather and local news"
               value={draft.city}
               onChange={(city) => update({ city })}
-              placeholder="Coquitlam, BC"
+              placeholder="Burnaby, BC"
               autoComplete="address-level2"
             />
           </div>
