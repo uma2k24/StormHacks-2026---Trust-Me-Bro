@@ -4,8 +4,32 @@ __pycache__/
 venv/
 .venv/
 node_modules/
-backend/parkinsons/cache/
+
+# Archives and raw audio (too large for GitHub)
+*.zip
+*.tar.gz
+*.tar
+*.7z
+
+# NumPy / audio caches and datasets
+*.npy
+*.wav
+*.flac
+*.mp3
+
+# Local data (download or generate on your machine)
 data/external/
 data/b2ai-voice/
+data/Italian*/
+parkinsons.zip
+
+# Keep small UCI tabular files only under data/uci_parkinsons/
+
+# Training caches and noisy CV logs
+backend/parkinsons/cache/
 backend/parkinsons/artifacts/cv/*.txt
-*.zip
+
+# Optional duplicate exports (release folder is the canonical copy)
+backend/parkinsons/artifacts/archive_italian_only.*
+backend/parkinsons/artifacts/v1_italian_only.onnx
+backend/parkinsons/artifacts/parkinson_voice_classifier.onnx
