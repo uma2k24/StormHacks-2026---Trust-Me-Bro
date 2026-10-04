@@ -36,6 +36,21 @@ export function isInterestId(value: unknown): value is InterestId {
   return INTERESTS.some((interest) => interest.id === value);
 }
 
+/** When the daily "your radio is ready" reminder goes off, or "off" for none. */
+export type ShowTime = "off" | "07:00" | "08:00" | "09:00" | "10:00";
+
+export const SHOW_TIMES: { id: ShowTime; label: string }[] = [
+  { id: "07:00", label: "7 am" },
+  { id: "08:00", label: "8 am" },
+  { id: "09:00", label: "9 am" },
+  { id: "10:00", label: "10 am" },
+  { id: "off", label: "No reminder" },
+];
+
+export function isShowTime(value: unknown): value is ShowTime {
+  return SHOW_TIMES.some((time) => time.id === value);
+}
+
 export type Profile = {
   name: string;
   /** Where the weather and local news come from, e.g. "Coquitlam, BC". May be empty. */
@@ -43,9 +58,27 @@ export type Profile = {
   interests: InterestId[];
   /** Anything else they would like to hear about, in their own words (a team, a hobby). */
   extras: string;
+  /** Someone who would like to hear how they are doing: one tap calls them or sends today's news. May be empty. */
+  familyName: string;
+  familyPhone: string;
+  /** Something the radio reminds them of at the end of each show, e.g. "Take your blood pressure pill". May be empty. */
+  reminder: string;
+  showTime: ShowTime;
 };
 
-export const emptyProfile: Profile = { name: "", city: "", interests: [], extras: "" };
+/** The parts of a profile that shape the show: all the server ever sees (family and reminders stay on the device). */
+export type ShowProfile = Pick<Profile, "name" | "city" | "interests" | "extras">;
+
+export const emptyProfile: Profile = {
+  name: "",
+  city: "",
+  interests: [],
+  extras: "",
+  familyName: "",
+  familyPhone: "",
+  reminder: "",
+  showTime: "off",
+};
 
 /** Stands in for a real profile when a demo link jumps straight to a later screen. */
 export const demoProfile: Profile = {
@@ -53,6 +86,10 @@ export const demoProfile: Profile = {
   city: "Coquitlam",
   interests: ["sports", "local", "garden"],
   extras: "",
+  familyName: "Sarah",
+  familyPhone: "604 555 0134",
+  reminder: "Take your blood pressure pill",
+  showTime: "08:00",
 };
 
 export type TextSize = "big" | "bigger" | "biggest";
@@ -72,14 +109,20 @@ export function isTextSize(value: unknown): value is TextSize {
 /** The listener's details with stray whitespace removed. */
 export function tidyProfile(profile: Profile): Profile {
   return {
+    ...profile,
     name: profile.name.trim(),
     city: profile.city.trim(),
-    interests: profile.interests,
     extras: profile.extras.trim(),
+    familyName: profile.familyName.trim(),
+    familyPhone: profile.familyPhone.trim(),
+    reminder: profile.reminder.trim(),
   };
 }
 
-/** Changes whenever the show would change; used to know when to ask for a fresh one. */
+/**
+ * Changes whenever the show would change; used to know when to ask for a fresh one. Family, the
+ * reminder and the show time don't shape the show, so editing them never costs a new one.
+ */
 export function profileKey(profile: Profile): string {
   return JSON.stringify([profile.name, profile.city, profile.interests, profile.extras]);
 }

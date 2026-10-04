@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, ListChecks } from "lucide-react";
 import { AiSummaryCard } from "@/components/AiSummaryCard";
 import { ReadinessDial } from "@/components/ReadinessDial";
 import { TrendChart } from "@/components/TrendChart";
@@ -10,7 +10,8 @@ import type { ScreeningResults } from "@/types/screening";
 
 type ResultsDashboardProps = {
   results: ScreeningResults;
-  onRestart: () => void;
+  /** After the last page: on to the day's list. */
+  onFinish: () => void;
 };
 
 /** One thing at a time: the score first, then the details, each on its own page. */
@@ -21,10 +22,7 @@ const PAGE_TITLES = [
   "Readiness over 14 days",
 ] as const;
 
-export function ResultsDashboard({
-  results,
-  onRestart,
-}: ResultsDashboardProps) {
+export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
   const [page, setPage] = useState(0);
   const isLast = page === PAGE_TITLES.length - 1;
 
@@ -38,9 +36,8 @@ export function ResultsDashboard({
         {page === 0 ? (
           <>
             <header className="pop-in text-center">
-              <h1 className="display h2 !text-[clamp(1.85rem,7.2vw,2.35rem)]">
-                Thanks, <span className="marker">{results.user}</span> — here&apos;s how you&apos;re
-                looking today.
+              <h1 className="display h2">
+                Thanks, <span className="marker">{results.user}</span>!
               </h1>
             </header>
             <ReadinessDial
@@ -91,11 +88,11 @@ export function ResultsDashboard({
           {isLast ? (
             <button
               type="button"
-              onClick={onRestart}
+              onClick={onFinish}
               className="btn btn-accent flex-1"
             >
-              <RotateCcw className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
-              Start New Check-in
+              <ListChecks className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
+              Your day
             </button>
           ) : (
             <button

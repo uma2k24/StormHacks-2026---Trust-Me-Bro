@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from "react";
+import { type DayRecord, type History, HISTORY_DAYS } from "@/data/daily";
 import { emptyLearned, type Learned, type Taste, type TodaysShow } from "@/data/learning";
 import {
   DEFAULT_TEXT_SIZE,
   isInterestId,
+  isShowTime,
   isTextSize,
   type Profile,
   type TextSize,
@@ -10,8 +12,8 @@ import {
 
 /**
  * The listener's profile and text size live in localStorage so they stick between visits, along
- * with what the radio has learned about them and today's show. All are read through
- * useSyncExternalStore so the server and the first client render always agree.
+ * with what the radio has learned about them, today's show, and which mornings they have tuned in.
+ * All are read through useSyncExternalStore so the server and the first client render always agree.
  */
 
 function createStore<T>(key: string, parse: (raw: string | null) => T) {
@@ -62,11 +64,17 @@ function parseProfile(raw: string | null): Profile | null {
   try {
     const data = JSON.parse(raw) as Partial<Profile>;
     if (typeof data.name !== "string" || !data.name.trim()) return null;
+    const text = (value: unknown) => (typeof value === "string" ? value : "");
     return {
       name: data.name,
-      city: typeof data.city === "string" ? data.city : "",
+      city: text(data.city),
       interests: Array.isArray(data.interests) ? data.interests.filter(isInterestId) : [],
-      extras: typeof data.extras === "string" ? data.extras : "",
+      extras: text(data.extras),
+      // added later: a profile saved before them simply has none
+      familyName: text(data.familyName),
+      familyPhone: text(data.familyPhone),
+      reminder: text(data.reminder),
+      showTime: isShowTime(data.showTime) ? data.showTime : "off",
     };
   } catch {
     return null;
@@ -120,12 +128,31 @@ function parseTodaysShow(raw: string | null): TodaysShow | null {
   }
 }
 
+const emptyHistory: History = {};
+
+function parseHistory(raw: string | null): History {
+  if (!raw) return emptyHistory;
+  try {
+    const data = JSON.parse(raw) as Record<string, Partial<DayRecord>>;
+    const history: History = {};
+    for (const [day, record] of Object.entries(data)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !isNumber(record?.score)) continue;
+      const done = Array.isArray(record.done) ? record.done.filter((id) => typeof id === "string") : [];
+      history[day] = { score: record.score, done };
+    }
+    return history;
+  } catch {
+    return emptyHistory;
+  }
+}
+
 const profileStore = createStore("voice-readiness:profile", parseProfile);
 const textSizeStore = createStore<TextSize>("voice-readiness:text-size", (raw) =>
   isTextSize(raw) ? raw : DEFAULT_TEXT_SIZE,
 );
 const learnedStore = createStore("voice-readiness:learned", parseLearned);
 const showStore = createStore("voice-readiness:today", parseTodaysShow);
+const historyStore = createStore("voice-readiness:history", parseHistory);
 
 /** undefined until the browser has been asked, null when nobody has signed up yet. */
 export function useProfile(): Profile | null | undefined {
@@ -176,4 +203,30 @@ export function useTodaysShow(key: string | null, day: string): TodaysShow | nul
 
 export function saveTodaysShow(show: TodaysShow) {
   showStore.write(JSON.stringify(show));
+}
+
+/** Which mornings they have tuned in, and what they ticked off each day (see data/daily.ts). */
+export function useHistory(): History {
+  return useSyncExternalStore(historyStore.subscribe, historyStore.getSnapshot, () => emptyHistory);
+}
+
+function saveHistory(history: History) {
+  // only the most recent days are kept
+  const days = Object.keys(history).sort().slice(-HISTORY_DAYS);
+  historyStore.write(JSON.stringify(Object.fromEntries(days.map((day) => [day, history[day]]))));
+}
+
+/** Today's check-in is done. Anything already ticked off today stays ticked. */
+export function recordCheckIn(day: string, score: number) {
+  const history = historyStore.getSnapshot();
+  saveHistory({ ...history, [day]: { score, done: history[day]?.done ?? [] } });
+}
+
+/** Ticks one of the day's little things off, or back on. */
+export function toggleDone(day: string, id: string) {
+  const history = historyStore.getSnapshot();
+  const record = history[day];
+  if (!record) return;
+  const done = record.done.includes(id) ? record.done.filter((item) => item !== id) : [...record.done, id];
+  saveHistory({ ...history, [day]: { ...record, done } });
 }

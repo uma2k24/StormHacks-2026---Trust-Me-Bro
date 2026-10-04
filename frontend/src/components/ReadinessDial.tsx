@@ -141,17 +141,15 @@ export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
           <circle cx={CX} cy={CY} r="7" fill="var(--accent)" />
         </svg>
 
-        <p className="display mt-1 text-[4.5rem] leading-none tabular-nums" aria-hidden="true">
-          {shown}
-        </p>
-        <p className="display mt-2 text-[1.5rem] text-[var(--ink-soft)]" aria-hidden="true">
-          out of 100
+        <p className="mt-1 flex flex-wrap items-baseline justify-center gap-x-3" aria-hidden="true">
+          <span className="display text-[4.5rem] leading-none tabular-nums">{shown}</span>
+          <span className="display text-[1.5rem] text-[var(--ink-soft)]">out of 100</span>
         </p>
 
         <StatusChip
           status={statusColor}
           label={label}
-          className="mt-4 !px-4 !py-2 !text-[1.5rem]"
+          className="mt-4 !px-4 !py-1.5 !text-[1.3rem]"
         />
       </div>
     </Window>

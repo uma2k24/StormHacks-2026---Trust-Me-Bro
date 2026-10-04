@@ -1,4 +1,4 @@
-import { INTERESTS, type Profile } from "@/data/profile";
+import { INTERESTS, type ShowProfile } from "@/data/profile";
 import type { SegmentKind } from "@/data/checkInScript";
 import { replyTo } from "@/lib/conversation";
 import { clean, cleanName, cleanSpeech, interestList } from "@/lib/sanitize";
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "a transcript and a known segment kind are required" }, { status: 400 });
   }
 
-  const profile: Profile = {
+  const profile: ShowProfile = {
     name: cleanName(typeof body.name === "string" ? body.name : null),
     city: clean(typeof body.city === "string" ? body.city : null, 60),
     interests: interestList(Array.isArray(body.interests) ? (body.interests as string[]) : null, INTERESTS.length),

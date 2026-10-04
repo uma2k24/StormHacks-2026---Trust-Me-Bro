@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Radio } from "lucide-react";
 import { Field } from "@/components/Field";
 import { InterestPicker } from "@/components/InterestPicker";
 import { PagerDots } from "@/components/PagerDots";
+import { ShowTimePicker } from "@/components/ShowTimePicker";
 import { TextSizePicker } from "@/components/TextSizePicker";
 import { emptyProfile, type Profile, tidyProfile } from "@/data/profile";
 import { saveTextSize, useTextSize } from "@/lib/storage";
@@ -20,6 +21,9 @@ const STEP_TITLES = [
   "Where you live",
   "What you like",
   "Anything else",
+  "Your family",
+  "A daily reminder",
+  "Your radio time",
   "Text size",
   "All set",
 ] as const;
@@ -164,6 +168,78 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
         {step === 5 ? (
           <>
             <header className="pop-in">
+              <h1 className="display h2">Who would like to hear how you&apos;re doing?</h1>
+              <p className="lede mx-auto mt-3 max-w-[24rem]">
+                A son, a daughter, a friend. You can skip this.
+              </p>
+            </header>
+            <div className="flex flex-col gap-4 text-left">
+              <Field
+                label="Their name"
+                value={draft.familyName}
+                onChange={(familyName) => update({ familyName })}
+                placeholder="Sarah"
+                maxLength={40}
+                autoFocus
+              />
+              <Field
+                label="Their phone number"
+                type="tel"
+                value={draft.familyPhone}
+                onChange={(familyPhone) => update({ familyPhone })}
+                placeholder="604 555 0134"
+                maxLength={24}
+                autoComplete="tel"
+                onEnter={next}
+              />
+            </div>
+          </>
+        ) : null}
+
+        {step === 6 ? (
+          <>
+            <header className="pop-in">
+              <h1 className="display h2">Anything the radio should remind you about?</h1>
+              <p className="lede mx-auto mt-3 max-w-[24rem]">
+                Like a pill to take or plants to water. You can skip this.
+              </p>
+            </header>
+            <div className="text-left">
+              <Field
+                label="Each morning, remind me to…"
+                value={draft.reminder}
+                onChange={(reminder) => update({ reminder })}
+                placeholder="Take my blood pressure pill"
+                maxLength={80}
+                autoFocus
+                onEnter={next}
+              />
+            </div>
+          </>
+        ) : null}
+
+        {step === 7 ? (
+          <>
+            <header className="pop-in">
+              <h1 id="signup-time" className="display h2">
+                When should your radio be ready?
+              </h1>
+              <p className="lede mx-auto mt-3 max-w-[24rem]">
+                We&apos;ll remind you each morning.
+              </p>
+            </header>
+            <ShowTimePicker
+              value={draft.showTime}
+              onChange={(showTime) => update({ showTime })}
+              labelledBy="signup-time"
+              name={firstName}
+            />
+          </>
+        ) : null}
+
+        {step === 8 ? (
+          <>
+            <header className="pop-in">
               <h1 id="signup-size" className="display h2">
                 How big should the writing be?
               </h1>
@@ -175,7 +251,7 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
           </>
         ) : null}
 
-        {step === 6 ? (
+        {step === LAST_STEP ? (
           <header className="pop-in">
             <h1 className="display h1">
               You&apos;re all set, <span className="marker">{firstName}</span>!

@@ -104,6 +104,63 @@ export async function speak(
   if (!signal.aborted) onProgress?.(1);
 }
 
+/**
+ * Reads something aloud because the listener asked (the voice summary): the radio's voice when there
+ * is one, otherwise the device's own voice, so pressing Play is never silent. Call unlockRadioVoice()
+ * in the same tap. `onProgress` works as it does for speak().
+ */
+export async function readAloud(
+  text: string,
+  signal: AbortSignal,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  const url = await Promise.race([
+    prefetchClip(text),
+    wait(CLIP_TIMEOUT_MS, signal).then(() => null),
+  ]);
+  if (signal.aborted) return;
+  if (url && audio) return speak(text, signal, onProgress);
+  if (typeof window.speechSynthesis !== "undefined") return deviceVoice(text, signal, onProgress);
+  return pace(text, signal, onProgress);
+}
+
+/** The browser's built-in voice, a touch slower than usual. */
+function deviceVoice(
+  text: string,
+  signal: AbortSignal,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    let settled = false;
+    // some browsers never report the end (or have no voices at all): give up after twice the reading time
+    const safety = window.setTimeout(() => finish(), readingTime(text) * 2);
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(safety);
+      signal.removeEventListener("abort", stop);
+      if (!signal.aborted) onProgress?.(1);
+      resolve();
+    };
+    const stop = () => {
+      synth.cancel();
+      finish();
+    };
+    utterance.onboundary = (event) => {
+      if (event.name === "word") onProgress?.(event.charIndex / text.length);
+    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    signal.addEventListener("abort", stop);
+    synth.cancel();
+    onProgress?.(0);
+    synth.speak(utterance);
+  });
+}
+
 /** No voice: the line stays up for about as long as it takes to read, with its words arriving over that time. */
 async function pace(
   text: string,

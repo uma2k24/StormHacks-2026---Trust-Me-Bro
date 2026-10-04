@@ -10,7 +10,9 @@ import { ProcessingScreen } from "@/components/ProcessingScreen";
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 import { SettingsScreen } from "@/components/SettingsScreen";
 import { SignUpScreen } from "@/components/SignUpScreen";
+import { TodayScreen } from "@/components/TodayScreen";
 import { type Briefing, type BriefingSegment, mockBriefingFor } from "@/data/checkInScript";
+import { demoHistory, lastSevenDays, planForToday, streakOf } from "@/data/daily";
 import {
   type AnswerTiming,
   chooseInterests,
@@ -26,9 +28,12 @@ import { primeMicrophone } from "@/lib/recorder";
 import {
   loadLearned,
   loadTodaysShow,
+  recordCheckIn,
   saveLearned,
   saveProfile,
   saveTodaysShow,
+  toggleDone,
+  useHistory,
   useProfile,
   useTextSize,
   useTodaysShow,
@@ -37,7 +42,7 @@ import type { AppScreen } from "@/types/screening";
 
 type Launch = { screen: AppScreen; step: number; demo: boolean };
 
-/** Demo links: ?screen=signup|settings|idle|recording|processing|results (and ?step=0-5 for sign-up). */
+/** Demo links: ?screen=signup|settings|idle|recording|processing|results|today (and ?step=0-9 for sign-up). */
 function launchFrom(search: string): Launch {
   const params = new URLSearchParams(search);
   const value = params.get("screen");
@@ -48,6 +53,7 @@ function launchFrom(search: string): Launch {
   if (value === "recording" || value === "chat") return { screen: "recording", step, demo };
   if (value === "processing") return { screen: "processing", step, demo };
   if (value === "results") return { screen: "results", step, demo };
+  if (value === "today") return { screen: "today", step, demo };
   return { screen: "idle", step, demo };
 }
 
@@ -56,6 +62,7 @@ const neverChanges = () => () => {};
 export default function Home() {
   const stored = useProfile(); // undefined until the browser has been asked
   const textSize = useTextSize();
+  const savedHistory = useHistory();
   const search = useSyncExternalStore(
     neverChanges,
     () => window.location.search,
@@ -82,6 +89,18 @@ export default function Home() {
   // The mock plays until the live briefing arrives. It's frozen once the show starts.
   const briefing: Briefing =
     todays?.briefing ?? mockBriefingFor(profile ?? demoProfile, todays?.picks);
+
+  // The mornings they've tuned in. A demo link has no listener, so it borrows a lived-in week.
+  const history = stored ? savedHistory : { ...demoHistory(today), ...savedHistory };
+  const doneToday = Boolean(history[today]);
+  const results = { ...mockResults, user: profile?.name ?? "" };
+  const todaysList = planForToday({
+    profile: profile ?? demoProfile,
+    status: results.statusColor,
+    metrics: results.metrics,
+    weather: (onAir ?? briefing).segments.find((segment) => segment.kind === "weather")?.brief,
+  });
+  const ticked = history[today]?.done ?? [];
 
   useEffect(() => {
     if (!profile || !key) return;
@@ -143,10 +162,22 @@ export default function Home() {
     await Promise.race([primeMicrophone(), new Promise((resolve) => window.setTimeout(resolve, 15000))]);
     setScreen("recording");
   }, [briefing]);
-  const finishRecording = useCallback(() => setScreen("processing"), []);
+  const finishRecording = useCallback(() => {
+    recordCheckIn(today, mockResults.readinessScore); // today's show is done, whatever happens next
+    setScreen("processing");
+  }, [today]);
   const showResults = useCallback(() => setScreen("results"), []);
-  const restart = useCallback(() => setScreen("idle"), []);
+  const goHome = useCallback(() => setScreen("idle"), []);
+  const openToday = useCallback(() => setScreen("today"), []);
   const openSettings = useCallback(() => setScreen("settings"), []);
+  const tick = useCallback(
+    (id: string) => {
+      // a demo link can open the list before any show has been heard
+      if (!savedHistory[today]) recordCheckIn(today, mockResults.readinessScore);
+      toggleDone(today, id);
+    },
+    [savedHistory, today],
+  );
   const saveAndGoHome = useCallback((next: Profile) => {
     saveProfile(next);
     setScreen("idle");
@@ -174,9 +205,15 @@ export default function Home() {
 
           {current === "idle" && profile ? (
             <IdleScreen
-              userName={profile.name}
+              profile={profile}
               segments={briefing.segments}
+              doneToday={doneToday}
+              week={lastSevenDays(history, today)}
+              streak={streakOf(history, today)}
+              listDone={todaysList.filter((item) => ticked.includes(item.id)).length}
+              listTotal={todaysList.length}
               onStart={startCheckIn}
+              onOpenToday={openToday}
               onOpenSettings={openSettings}
             />
           ) : null}
@@ -193,9 +230,17 @@ export default function Home() {
           {current === "processing" ? <ProcessingScreen onComplete={showResults} /> : null}
 
           {current === "results" && profile ? (
-            <ResultsDashboard
-              results={{ ...mockResults, user: profile.name }}
-              onRestart={restart}
+            <ResultsDashboard results={results} onFinish={openToday} />
+          ) : null}
+
+          {current === "today" && profile ? (
+            <TodayScreen
+              profile={profile}
+              status={results.statusColor}
+              items={todaysList}
+              done={ticked}
+              onToggle={tick}
+              onDone={goHome}
             />
           ) : null}
         </main>

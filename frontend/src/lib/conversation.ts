@@ -1,5 +1,5 @@
 import { fallbackReply, type SegmentKind } from "@/data/checkInScript";
-import type { InterestId, Profile } from "@/data/profile";
+import type { InterestId, ShowProfile } from "@/data/profile";
 import {
   askGemini,
   config,
@@ -71,7 +71,7 @@ export async function transcribe(audio: ArrayBuffer, mimeType: string): Promise<
 // ---------- the host's reply ------------------------------------------------
 
 export type ReplyRequest = {
-  profile: Profile;
+  profile: ShowProfile;
   /** The segment they just answered. */
   segment: { kind: SegmentKind; topic: string; brief: string; question: string };
   /** What they said, from `transcribe`. */

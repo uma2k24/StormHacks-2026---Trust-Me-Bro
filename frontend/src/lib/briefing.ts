@@ -5,7 +5,7 @@ import {
   type BriefingSegment,
   type SegmentKind,
 } from "@/data/checkInScript";
-import type { InterestId, Profile } from "@/data/profile";
+import type { InterestId, ShowProfile } from "@/data/profile";
 
 /**
  * Server-only: builds today's morning briefing.
@@ -118,7 +118,7 @@ async function findPlace(query: string): Promise<Place> {
 const cache = new Map<string, { at: number; briefing: Promise<Briefing> }>();
 
 /** `requested` is the two interests to cover; anything else falls back to the listener's first two. */
-export function getBriefing(profile: Profile, requested: InterestId[] = []): Promise<Briefing> {
+export function getBriefing(profile: ShowProfile, requested: InterestId[] = []): Promise<Briefing> {
   const picks = requested.length === 2 ? requested : fallbackPicks(profile);
   if (!config.geminiKey) return Promise.resolve(mockBriefingFor(profile, picks));
 
@@ -140,7 +140,7 @@ export function getBriefing(profile: Profile, requested: InterestId[] = []): Pro
   return briefing;
 }
 
-async function buildBriefing(profile: Profile, picks: InterestId[]): Promise<Briefing> {
+async function buildBriefing(profile: ShowProfile, picks: InterestId[]): Promise<Briefing> {
   const place = await resolvePlace(profile.city).catch((error) => {
     console.warn("[briefing] place lookup failed, using the default town:", error);
     return defaultPlace;
@@ -280,7 +280,7 @@ function buildPrompt({
   today,
   weather,
 }: {
-  profile: Profile;
+  profile: ShowProfile;
   picks: InterestId[];
   place: Place;
   today: string;

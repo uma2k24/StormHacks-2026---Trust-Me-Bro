@@ -1,4 +1,24 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import { dateParts } from "@/data/daily";
+
+// The date is read on the client (the server doesn't know the listener's time zone) and re-read
+// every minute, so a page left open overnight turns over to the new day.
+const everyMinute = (onChange: () => void) => {
+  const id = window.setInterval(onChange, 60_000);
+  return () => window.clearInterval(id);
+};
+const todaysDate = () => {
+  const { weekday, date } = dateParts();
+  return `${weekday}|${date}`;
+};
+
+/** Mac-style menu bar: the brand, and today's date written out so nobody has to wonder what day it is. */
 export function AppBar() {
+  const today = useSyncExternalStore(everyMinute, todaysDate, () => null);
+  const [weekday, date] = today?.split("|") ?? [];
+
   return (
     <header className="appbar">
       <div className="appbar-inner">
@@ -14,6 +34,12 @@ export function AppBar() {
           </svg>
           <span className="brand-name display">Morning Radio</span>
         </div>
+        {today ? (
+          <p className="appbar-date" aria-label={`Today is ${weekday}, ${date}`}>
+            <span className="appbar-weekday">{weekday}</span>
+            <span>{date}</span>
+          </p>
+        ) : null}
       </div>
     </header>
   );

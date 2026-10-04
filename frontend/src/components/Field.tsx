@@ -13,6 +13,8 @@ type FieldProps = {
   /** Shown with a warning icon, so it never relies on colour alone. */
   error?: string;
   maxLength?: number;
+  /** "tel" brings up the number keypad. */
+  type?: "text" | "tel";
   autoComplete?: string;
   autoFocus?: boolean;
   inputRef?: Ref<HTMLInputElement>;
@@ -29,6 +31,7 @@ export function Field({
   hint,
   error,
   maxLength = 60,
+  type = "text",
   autoComplete,
   autoFocus,
   inputRef,
@@ -47,7 +50,7 @@ export function Field({
         id={id}
         ref={inputRef}
         className="field-input"
-        type="text"
+        type={type}
         value={value}
         placeholder={placeholder}
         maxLength={maxLength}

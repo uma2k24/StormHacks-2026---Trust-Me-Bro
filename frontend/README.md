@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Demo links: `/?screen=signup&step=0-6`, `/?screen=settings`, `/?screen=idle|recording|processing|results` (these skip sign-up).
+Open [http://localhost:3000](http://localhost:3000). Demo links: `/?screen=signup&step=0-9`, `/?screen=settings`, `/?screen=idle|recording|processing|results|today` (these skip sign-up, and borrow a lived-in week so the home screen's lamps aren't all dark).
 
 ## Morning briefing (Gemini + ElevenLabs)
 
@@ -50,6 +50,18 @@ The more someone listens, the better the show fits them, and none of it costs Ge
 - **Gemini budget:** learning itself makes no calls (the conversation replies above are the only other Gemini use). The app picks the two interests, so Gemini only writes the words and the prompt is smaller. Today's show is saved on the device (`voice-readiness:today`) with the choice behind it, so the app asks for at most one show per listener per day, however often it is opened or however much is learned in between (a new choice would mean a new call). Editing the profile asks again.
 - **Stored on the device only:** `voice-readiness:learned` and `voice-readiness:today` in localStorage. Demo links (`?screen=…` with no sign-up) learn nothing.
 
+## Part of their day
+
+The check-in only works if it happens every morning, so the app is built to fit into the listener's day. None of this calls Gemini: it is all worked out on the device (`src/data/daily.ts`), and family details and reminders never leave it (the server only ever sees `ShowProfile`: name, town, interests, extras).
+
+- **What day it is.** The menu bar always shows the date written out ("Saturday / October 3"), and the greeting follows the clock (Good Morning / Afternoon / Evening).
+- **Done for today.** Once the show has been heard, home changes: the big button turns teal and opens **Your day**, a little **Play again** button sits beside it, and a row of radio lamps shows the last seven mornings ("4 mornings in a row!"). It celebrates the mornings that happened and never scolds about the ones that didn't. Kept in `voice-readiness:history` (the last 60 days).
+- **Your day.** After the results, three little things for today, ticked off with one tap and remembered until tomorrow: their own reminder first, then one for their voice (a warm drink when it sounds breathy, rest on a tired day), then one from the weather segment (a walk before the rain, mind the ice), topped up with a chat. Gentle, never diagnostic.
+- **Family.** Someone who'd like to hear how they're doing (sign-up and Settings). Home has a one-tap **Call Sarah**; Your day has **Tell Sarah how I am**, which opens Messages with a note written from today's result. On a tired day it becomes **Ask Sarah to call me** and moves to the top.
+- **The radio reminds them.** "Each morning, remind me to…" (e.g. take a pill) is read by the radio as the show's last line ("Before you go, Margaret, a little reminder: take your blood pressure pill"), and it's the first thing on Your day. Spoken by ElevenLabs like every other line; no Gemini.
+- **A nudge every morning.** They choose when the radio should be ready (7 to 10 am, or no reminder). A web page can't wake anyone up, so choosing a time offers **Add to my calendar**: a repeating daily event with an alert (`src/lib/calendar.ts`). The iOS app sends a real notification instead.
+- **Read it to me.** The voice summary is read aloud, each word lighting up as it is said, in the radio's voice or, without one, the browser's own.
+
 ## Design: "Teal Desktop"
 
 A 90s-desktop look rebuilt for large, legible, high-contrast use, in **one colour theme: teal and coral**. Teal is the calm, good colour (the app itself, "Ready"); coral is the single warm accent (main actions, live states, "Pay Attention"). Everything else is cream graph paper and a very dark teal ink. Mac-"Platinum" pinstriped windows, thick ink outlines, hard offset shadows, and buttons that physically press down into their shadow.
@@ -60,14 +72,15 @@ A 90s-desktop look rebuilt for large, legible, high-contrast use, in **one colou
 - **Text size:** text is big by default (125%). "Big", "Bigger" and "Biggest" in the sign-up flow and in Settings scale every size on the page (all sizes are `rem`). The choice is remembered.
 - **Targets and focus:** primary buttons are 64px or taller; one thick ink focus ring everywhere.
 - **Motion:** the readiness needle swings in, the score counts up, the Talk button breathes sonar rings, the headline name gets a highlighter swipe. All of it stops under `prefers-reduced-motion`.
-- **Tokens:** colours, type and motion live in `src/app/globals.css`; reusable pieces are `Window`, `StatusChip`, `AppBar` and `Confetti` in `src/components/`. The profile, interests and text sizes are in `src/data/profile.ts`; the mock show (which follows the picks), the radio's fixed lines and timings are in `src/data/checkInScript.ts`; what the radio has learned about the listener and how it chooses the show is in `src/data/learning.ts`; the server side is `src/lib/briefing.ts` (the show) and `src/lib/conversation.ts` (transcription and replies); the browser side of talking back is `src/lib/recorder.ts` and `src/lib/conversationClient.ts`, and the radio's voice is `src/lib/radioVoice.ts`.
+- **Tokens:** colours, type and motion live in `src/app/globals.css`; reusable pieces are `Window`, `StatusChip`, `AppBar`, `WeekLamps` and `Confetti` in `src/components/`. The day's rhythm (greeting, date, streak, Your day, family message, the radio's reminder) is `src/data/daily.ts`. The profile, interests and text sizes are in `src/data/profile.ts`; the mock show (which follows the picks), the radio's fixed lines and timings are in `src/data/checkInScript.ts`; what the radio has learned about the listener and how it chooses the show is in `src/data/learning.ts`; the server side is `src/lib/briefing.ts` (the show) and `src/lib/conversation.ts` (transcription and replies); the browser side of talking back is `src/lib/recorder.ts` and `src/lib/conversationClient.ts`, and the radio's voice is `src/lib/radioVoice.ts`.
 
 ## UI flow
 
-0. **Sign up** (first visit only) — seven one-question steps: welcome, name, town, interests, anything else, text size, all set. Nothing is saved until the last step. The profile lives in `localStorage` (`src/lib/storage.ts`); there is no account or password.
-1. **Idle** — "Your morning radio is ready", a giant Play button, what's on today's show, and a big **Settings** button pinned to the bottom. Settings holds everything from sign-up (name, town, interests, text size); text size applies instantly, the rest on **Done**.
-2. **Morning briefing** — a little radio reads three short segments (the weather, then two things from your interests) and asks your opinion after each. It listens by itself, answers what you said, and moves on, with no touching; your answers are the conversational audio for the check-in
+0. **Sign up** (first visit only) — ten one-question steps: welcome, name, town, interests, anything else, family, a daily reminder, radio time, text size, all set. Nothing is saved until the last step. The profile lives in `localStorage` (`src/lib/storage.ts`); there is no account or password.
+1. **Idle** — "Your morning radio is ready", a giant Play button, what's on today's show, and a bottom row with **Call Sarah** (when family is set) and **Settings**. Once today's show is done: **Your day**, **Play again** and the week of lamps instead. Settings holds everything from sign-up; text size applies instantly, the rest on **Done**.
+2. **Morning briefing** — a little radio reads three short segments (the weather, then two things from your interests) and asks your opinion after each. It listens by itself, answers what you said, and moves on, with no touching; your answers are the conversational audio for the check-in. Its last line is their daily reminder, if they set one
 3. **Processing** — calming loader with chatty status text
-4. **Results** — four pages, one at a time: readiness gauge, voice summary, vitals, 14-day trend
+4. **Results** — four pages, one at a time: readiness gauge, voice summary (read aloud on request), vitals, 14-day trend
+5. **Your day** — three little things to tick off, and one tap to tell the family how it went
 
 Copy stays non-diagnostic: readiness, jitter, shimmer, HNR, MPP, and “your usual.”

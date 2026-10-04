@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Mic } from "lucide-react";
+import { BellRing, Mic } from "lucide-react";
 import { SegmentIcon } from "@/components/SegmentIcon";
 import { Waveform } from "@/components/Waveform";
 import {
@@ -21,6 +21,7 @@ import {
   THINKING_LINE,
   wordsSpoken,
 } from "@/data/checkInScript";
+import { reminderLine } from "@/data/daily";
 import type { AnswerTiming } from "@/data/learning";
 import type { Profile } from "@/data/profile";
 import { fetchReply, transcribeAnswer } from "@/lib/conversationClient";
@@ -38,6 +39,7 @@ import { MicError, type Recorder, type Recording, startRecording } from "@/lib/r
  *   heard     - your own words, while the host thinks of a reply
  *   replying  - the host's reply, read aloud, then on to the next segment
  *   notice    - something to say before it listens again (it didn't catch that, no microphone)
+ *   closing   - after the last segment, the listener's own daily reminder ("take your pill"), then done
  * Whatever the radio says appears word by word as it is said, and the text scrolls up by itself
  * when it is longer than the screen.
  * The Talk / Done button is still there: tap it to send an answer early, or hold it and let go.
@@ -47,7 +49,16 @@ import { MicError, type Recorder, type Recording, startRecording } from "@/lib/r
  * a key or a backend it falls back to a sample answer after a moment, so the show still plays.
  * Mirrored in ios/VoiceReadiness/Views/RecordingView.swift.
  */
-type Phase = "briefing" | "speaking" | "ready" | "listening" | "thinking" | "heard" | "replying" | "notice";
+type Phase =
+  | "briefing"
+  | "speaking"
+  | "ready"
+  | "listening"
+  | "thinking"
+  | "heard"
+  | "replying"
+  | "notice"
+  | "closing";
 
 type ActiveScreenProps = {
   segments: BriefingSegment[];
@@ -223,10 +234,30 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     };
   }, []);
 
+  /** The show is over: the radio reads their daily reminder, if they have one, then hands over. */
+  const closeShow = async () => {
+    const line = reminderLine(profile);
+    if (!line) {
+      onComplete();
+      return;
+    }
+    pipeline.current?.abort();
+    const controller = new AbortController();
+    pipeline.current = controller;
+    const { signal } = controller;
+    setSpoken(line);
+    await prepareClip(line, signal);
+    if (signal.aborted) return;
+    setPhase("closing");
+    await say(line, signal);
+    await wait(AFTER_REPLY_MS, signal);
+    if (!signal.aborted) onComplete();
+  };
+
   const advance = () => {
     const next = turnIndex + 1;
     if (next >= totalTurns) {
-      onComplete();
+      void closeShow();
       return;
     }
     setPhase("briefing");
@@ -425,7 +456,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
           ? THINKING_LINE
           : phase === "heard"
             ? `“${said}”`
-            : phase === "replying" || phase === "notice"
+            : phase === "replying" || phase === "notice" || phase === "closing"
               ? spoken
               : turn.question;
   const captionKey =
@@ -437,12 +468,18 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
           ? `${turn.id}-heard`
           : phase === "replying" || phase === "notice"
             ? `${turn.id}-${phase}`
-            : `${turn.id}-question`;
+            : phase === "closing"
+              ? "closing"
+              : `${turn.id}-question`;
 
   const canPress = phase === "ready" || phase === "listening" || phase === "notice";
   const live =
     revealed !== null &&
-    (phase === "briefing" || phase === "speaking" || phase === "replying" || phase === "notice");
+    (phase === "briefing" ||
+      phase === "speaking" ||
+      phase === "replying" ||
+      phase === "notice" ||
+      phase === "closing");
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -477,10 +514,17 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
         </div>
 
         <div className="radio-screen" data-phase={phase} aria-live="polite" aria-atomic="true">
-          <p className="radio-topic">
-            <SegmentIcon kind={turn.kind} className="h-5 w-5" strokeWidth={2.5} />
-            {turn.topic}
-          </p>
+          {phase === "closing" ? (
+            <p className="radio-topic">
+              <BellRing className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
+              Reminder
+            </p>
+          ) : (
+            <p className="radio-topic">
+              <SegmentIcon kind={turn.kind} className="h-5 w-5" strokeWidth={2.5} />
+              {turn.topic}
+            </p>
+          )}
           {/* Long text scrolls inside the screen instead of running off it. */}
           <div
             ref={captionScroll}
@@ -510,7 +554,11 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
           <Waveform
             bars={9}
             active={
-              phase === "briefing" || phase === "speaking" || phase === "listening" || phase === "replying"
+              phase === "briefing" ||
+              phase === "speaking" ||
+              phase === "listening" ||
+              phase === "replying" ||
+              phase === "closing"
             }
           />
         </div>
