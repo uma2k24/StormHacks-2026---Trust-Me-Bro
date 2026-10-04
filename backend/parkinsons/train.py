@@ -1,10 +1,11 @@
-"""Subject-grouped cross-validation training.
+"""Subject-grouped cross-validation training across all corpora.
 
-    python train.py --fold 0      # trains one fold, writes artifacts/cv/fold0.{pt,json}
-    python train.py --all-folds   # trains every fold sequentially
+    python train.py --fold 0                 # one CV fold -> artifacts/cv/fold0.{pt,json}
+    python train.py --all-folds              # every fold sequentially
+    python train.py --holdout-source mdvr    # train without MDVR-KCL, test on all of it -> artifacts/holdout_mdvr.json
 
-Every fold's model is evaluated only on people it never heard during training;
-the fold models are later averaged into the shipped ensemble (export.py).
+Every model is evaluated only on people it never heard during training; the CV
+fold models are averaged into the shipped ensemble (export.py).
 """
 
 import argparse
@@ -18,7 +19,7 @@ import torch.nn.functional as F
 from sklearn.model_selection import StratifiedKFold
 
 from augment import augment
-from config import ARTIFACTS_DIR, EVAL_HOP_SECONDS, SAMPLE_RATE, TASK_GROUPS, TRAIN_HOP_SECONDS, WINDOW_SAMPLES
+from config import ARTIFACTS_DIR, EVAL_HOP_SECONDS, SAMPLE_RATE, SOURCE_WEIGHTS, TASK_GROUPS, TRAIN_HOP_SECONDS, WINDOW_SAMPLES
 from data import get_audio, load_cache, valid_window_starts
 from model import LogMelFrontend, PDNet, spec_augment
 
@@ -42,46 +43,58 @@ def window_at(audio: np.ndarray, start: int) -> np.ndarray:
 
 
 class BalancedSampler:
-    """Draws (task group, label) first so neither task mix nor subject count predicts the label."""
+    """Draws source, then label, then task, then subject.
 
-    def __init__(self, recordings, audio_buffer, subjects: set[str]):
-        self.buffer = audio_buffer
+    Within a source that has both classes, labels are 50/50 and tasks are drawn
+    only from those both classes performed, so recording setup, task mix, and
+    per-subject recording counts carry no label information.
+    """
+
+    def __init__(self, recordings, buffers, subjects: set[str]):
+        self.buffers = buffers
         self.pool = {}
         for r in recordings:
             if r.subject in subjects:
-                self.pool.setdefault((r.task_group, r.label), {}).setdefault(r.subject, []).append(r)
+                self.pool.setdefault(r.source, {}).setdefault(r.label, {}).setdefault(r.task_group, {}).setdefault(r.subject, []).append(r)
         self.starts = {
-            r.path: valid_window_starts(get_audio(audio_buffer, r), WINDOW_SAMPLES, int(TRAIN_HOP_SECONDS * SAMPLE_RATE))
-            for recs in self.pool.values()
-            for subj in recs.values()
-            for r in subj
+            r.path: valid_window_starts(get_audio(buffers, r), WINDOW_SAMPLES, int(TRAIN_HOP_SECONDS * SAMPLE_RATE))
+            for r in recordings
+            if r.subject in subjects
         }
-        self.tasks = [t for t in TASK_GROUPS if all((t, y) in self.pool for y in (0, 1))]
-        weights = np.array([TASK_GROUPS[t] for t in self.tasks])
-        self.task_p = weights / weights.sum()
+        self.sources = sorted(self.pool)
+        w = np.array([SOURCE_WEIGHTS[s] for s in self.sources])
+        self.source_p = w / w.sum()
+        self.tasks = {}
+        for s, by_label in self.pool.items():
+            shared = set.intersection(*(set(by_task) for by_task in by_label.values()))
+            names = [t for t in TASK_GROUPS if t in shared]
+            tw = np.array([TASK_GROUPS[t] for t in names])
+            self.tasks[s] = (names, tw / tw.sum())
 
     def batch(self, size: int) -> tuple[torch.Tensor, torch.Tensor]:
         wavs, labels = [], []
         for _ in range(size):
-            task = self.tasks[np.random.choice(len(self.tasks), p=self.task_p)]
-            label = random.randint(0, 1)
-            by_subject = self.pool[(task, label)]
+            source = self.sources[np.random.choice(len(self.sources), p=self.source_p)]
+            label = random.choice(sorted(self.pool[source]))
+            names, p = self.tasks[source]
+            task = names[np.random.choice(len(names), p=p)]
+            by_subject = self.pool[source][label][task]
             rec = random.choice(by_subject[random.choice(list(by_subject))])
             start = int(random.choice(self.starts[rec.path]))
             if rec.length > WINDOW_SAMPLES:
                 start = min(start + random.randint(0, int(TRAIN_HOP_SECONDS * SAMPLE_RATE)), rec.length - WINDOW_SAMPLES)
-            wavs.append(window_at(get_audio(self.buffer, rec), start))
+            wavs.append(window_at(get_audio(self.buffers, rec), start))
             labels.append(label)
         return torch.from_numpy(np.stack(wavs)), torch.tensor(labels, dtype=torch.float32)
 
 
 @torch.no_grad()
-def predict_recordings(frontend, net, recordings, audio_buffer) -> list[dict]:
+def predict_recordings(frontend, net, recordings, buffers) -> list[dict]:
     net.eval()
     out = []
     hop = int(EVAL_HOP_SECONDS * SAMPLE_RATE)
     for r in recordings:
-        audio = get_audio(audio_buffer, r)
+        audio = get_audio(buffers, r)
         starts = valid_window_starts(audio, WINDOW_SAMPLES, hop)
         wins = torch.from_numpy(np.stack([window_at(audio, int(s)) for s in starts]))
         probs = torch.cat([torch.sigmoid(net(frontend(w))) for w in wins.split(64)]).tolist()
@@ -91,6 +104,7 @@ def predict_recordings(frontend, net, recordings, audio_buffer) -> list[dict]:
                 "subject": r.subject,
                 "group": r.group,
                 "label": r.label,
+                "source": r.source,
                 "task": r.task,
                 "task_group": r.task_group,
                 "orig_sr": r.orig_sr,
@@ -100,21 +114,11 @@ def predict_recordings(frontend, net, recordings, audio_buffer) -> list[dict]:
     return out
 
 
-def train_fold(fold: int, epochs: int, steps_per_epoch: int, batch_size: int, seed: int) -> None:
-    random.seed(seed + fold)
-    np.random.seed(seed + fold)
-    torch.manual_seed(seed + fold)
-
-    recordings, buffer = load_cache()
-    test_subjects = subject_folds(recordings)[fold]
-    train_subjects = {r.subject for r in recordings} - test_subjects
-    sampler = BalancedSampler(recordings, buffer, train_subjects)
-
+def train_model(train_subjects, recordings, buffers, epochs, steps_per_epoch, batch_size, tag) -> tuple[LogMelFrontend, PDNet]:
+    sampler = BalancedSampler(recordings, buffers, train_subjects)
     frontend, net = LogMelFrontend(), PDNet()
     opt = torch.optim.AdamW(net.parameters(), lr=2e-3, weight_decay=1e-2)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=2e-3, total_steps=epochs * steps_per_epoch, pct_start=0.15)
-
-    print(f"fold {fold}: {len(train_subjects)} train / {len(test_subjects)} test subjects", flush=True)
     for epoch in range(epochs):
         net.train()
         t0, total, correct, seen = time.time(), 0.0, 0, 0
@@ -131,26 +135,55 @@ def train_fold(fold: int, epochs: int, steps_per_epoch: int, batch_size: int, se
             total += loss.item() * len(y)
             correct += ((logits > 0).float() == y).sum().item()
             seen += len(y)
-        print(f"fold {fold} epoch {epoch + 1}/{epochs} loss {total / seen:.4f} train-acc {correct / seen:.3f} ({time.time() - t0:.0f}s)", flush=True)
+        print(f"{tag} epoch {epoch + 1}/{epochs} loss {total / seen:.4f} train-acc {correct / seen:.3f} ({time.time() - t0:.0f}s)", flush=True)
+    return frontend, net
 
+
+def seed_all(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+def run_fold(fold: int, args) -> None:
+    seed_all(args.seed + fold)
+    recordings, buffers = load_cache()
+    test_subjects = subject_folds(recordings)[fold]
+    train_subjects = {r.subject for r in recordings} - test_subjects
+    print(f"fold {fold}: {len(train_subjects)} train / {len(test_subjects)} test subjects", flush=True)
+    frontend, net = train_model(train_subjects, recordings, buffers, args.epochs, args.steps, args.batch, f"fold {fold}")
     CV_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(net.state_dict(), CV_DIR / f"fold{fold}.pt")
-    preds = predict_recordings(frontend, net, [r for r in recordings if r.subject in test_subjects], buffer)
+    preds = predict_recordings(frontend, net, [r for r in recordings if r.subject in test_subjects], buffers)
     (CV_DIR / f"fold{fold}.json").write_text(json.dumps(preds))
     print(f"fold {fold} done", flush=True)
+
+
+def run_holdout(source: str, args) -> None:
+    seed_all(args.seed + 100)
+    recordings, buffers = load_cache()
+    train_subjects = {r.subject for r in recordings if r.source != source}
+    print(f"holdout {source}: {len(train_subjects)} train subjects", flush=True)
+    frontend, net = train_model(train_subjects, recordings, buffers, args.epochs, args.steps, args.batch, f"holdout {source}")
+    preds = predict_recordings(frontend, net, [r for r in recordings if r.source == source], buffers)
+    (ARTIFACTS_DIR / f"holdout_{source}.json").write_text(json.dumps(preds))
+    print(f"holdout {source} done", flush=True)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--fold", type=int)
     parser.add_argument("--all-folds", action="store_true")
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--holdout-source")
+    parser.add_argument("--epochs", type=int, default=35)
     parser.add_argument("--steps", type=int, default=50)
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=7)
     args = parser.parse_args()
     torch.set_num_threads(args.threads)
-    folds = range(N_FOLDS) if args.all_folds else [args.fold]
-    for f in folds:
-        train_fold(f, args.epochs, args.steps, args.batch, args.seed)
+    if args.holdout_source:
+        run_holdout(args.holdout_source, args)
+    else:
+        for f in range(N_FOLDS) if args.all_folds else [args.fold]:
+            run_fold(f, args)

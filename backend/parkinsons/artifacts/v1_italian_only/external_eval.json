@@ -1,0 +1,17 @@
+{
+  "threshold": 0.6458601629247063,
+  "mdvr": {
+    "subjects": 38,
+    "healthy_flagged": "0/22",
+    "pd_flagged": "6/16",
+    "auc": 0.79,
+    "healthy_median": 0.304
+  },
+  "libri": {
+    "subjects": 26,
+    "healthy_flagged": "3/26",
+    "pd_flagged": "0/0",
+    "auc": null,
+    "healthy_median": 0.327
+  }
+}

@@ -52,23 +52,24 @@ def conv_bn(c_in: int, c_out: int) -> nn.Sequential:
 
 
 class PDNet(nn.Module):
-    def __init__(self, dropout: float = 0.3):
+    def __init__(self, dropout: float = 0.3, width: float = 1.0):
         super().__init__()
+        c1, c2, c3, c4 = (max(4, int(c * width)) for c in (16, 32, 64, 128))
         self.features = nn.Sequential(
-            conv_bn(1, 16),
+            conv_bn(1, c1),
             nn.AvgPool2d(2),
-            conv_bn(16, 32),
-            conv_bn(32, 32),
+            conv_bn(c1, c2),
+            conv_bn(c2, c2),
             nn.AvgPool2d(2),
-            conv_bn(32, 64),
-            conv_bn(64, 64),
+            conv_bn(c2, c3),
+            conv_bn(c3, c3),
             nn.AvgPool2d(2),
-            conv_bn(64, 128),
-            conv_bn(128, 128),
+            conv_bn(c3, c4),
+            conv_bn(c4, c4),
         )
         self.head = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(256, 64),
+            nn.Linear(c4 * 2, 64),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
             nn.Linear(64, 1),
@@ -97,6 +98,34 @@ def spec_augment(x: torch.Tensor, freq_masks: int = 2, max_f: int = 8, time_mask
         m = (idx >= s[:, None]) & (idx < (s + w)[:, None])
         x = x.masked_fill(m[:, None, None, :], 0.0)
     return x
+
+
+def mel_warp(x: torch.Tensor, max_warp: float = 0.12) -> torch.Tensor:
+    """Stretches/squeezes the mel axis per clip (VTLP-style).
+
+    Simulates different vocal-tract lengths so the network cannot identify a speaker
+    by their formant positions, which matters most when there are few speakers.
+    """
+    b, _, n_mels, n_frames = x.shape
+    factors = 1.0 + (torch.rand(b, device=x.device) * 2 - 1) * max_warp
+    base = torch.linspace(-1, 1, n_mels, device=x.device)[None].expand(b, n_mels)
+    warped = (base * factors[:, None]).clamp(-1, 1)
+    grid = torch.stack(
+        [
+            torch.linspace(-1, 1, n_frames, device=x.device)[None, None, :].expand(b, n_mels, n_frames),
+            warped[:, :, None].expand(b, n_mels, n_frames),
+        ],
+        dim=-1,
+    )
+    return F.grid_sample(x, grid, mode="bilinear", padding_mode="border", align_corners=True)
+
+
+def mixup(x: torch.Tensor, y: torch.Tensor, alpha: float = 0.4) -> tuple[torch.Tensor, torch.Tensor]:
+    """Blends pairs of clips and their labels; strong regularizer when speakers are scarce."""
+    lam = float(np.random.beta(alpha, alpha))
+    lam = max(lam, 1 - lam)
+    perm = torch.randperm(x.size(0), device=x.device)
+    return lam * x + (1 - lam) * x[perm], lam * y + (1 - lam) * y[perm]
 
 
 class VoiceClassifier(nn.Module):

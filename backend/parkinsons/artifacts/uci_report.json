@@ -1,0 +1,118 @@
+{
+  "selected": {
+    "model": "et",
+    "features": 16,
+    "subject_auc": 0.7250000000000001,
+    "subject_auc_sd": 0.07246137620599453,
+    "accuracy": 0.628125,
+    "sensitivity": 0.6208333333333333,
+    "specificity": 0.65,
+    "threshold": 0.7878324062111158
+  },
+  "comparison": {
+    "all22": [
+      {
+        "model": "logreg",
+        "features": 22,
+        "subject_auc": 0.6921875,
+        "subject_auc_sd": 0.05041333064031774,
+        "accuracy": 0.715625,
+        "sensitivity": 0.7833333333333333,
+        "specificity": 0.5125,
+        "threshold": 0.3775014983602888
+      },
+      {
+        "model": "svm",
+        "features": 22,
+        "subject_auc": 0.6145833333333334,
+        "subject_auc_sd": 0.05757505668931451,
+        "accuracy": 0.659375,
+        "sensitivity": 0.7333333333333333,
+        "specificity": 0.4375,
+        "threshold": 0.6785484218546504
+      },
+      {
+        "model": "rf",
+        "features": 22,
+        "subject_auc": 0.7432291666666666,
+        "subject_auc_sd": 0.04205870256921336,
+        "accuracy": 0.634375,
+        "sensitivity": 0.6291666666666667,
+        "specificity": 0.65,
+        "threshold": 0.8106283906380214
+      },
+      {
+        "model": "et",
+        "features": 22,
+        "subject_auc": 0.7651041666666667,
+        "subject_auc_sd": 0.04888347557230129,
+        "accuracy": 0.65,
+        "sensitivity": 0.6416666666666667,
+        "specificity": 0.675,
+        "threshold": 0.7595527519059796
+      },
+      {
+        "model": "gb",
+        "features": 22,
+        "subject_auc": 0.7098958333333333,
+        "subject_auc_sd": 0.06353526265542973,
+        "accuracy": 0.675,
+        "sensitivity": 0.7499999999999999,
+        "specificity": 0.45,
+        "threshold": 0.7226828899521404
+      }
+    ],
+    "praat16": [
+      {
+        "model": "logreg",
+        "features": 16,
+        "subject_auc": 0.6671875,
+        "subject_auc_sd": 0.05533838848018015,
+        "accuracy": 0.625,
+        "sensitivity": 0.6375,
+        "specificity": 0.5875,
+        "threshold": 0.6379807113465932
+      },
+      {
+        "model": "svm",
+        "features": 16,
+        "subject_auc": 0.5765625,
+        "subject_auc_sd": 0.09018240822617359,
+        "accuracy": 0.575,
+        "sensitivity": 0.6125,
+        "specificity": 0.4625,
+        "threshold": 0.8233455131410032
+      },
+      {
+        "model": "rf",
+        "features": 16,
+        "subject_auc": 0.6671875,
+        "subject_auc_sd": 0.05035949323640753,
+        "accuracy": 0.55625,
+        "sensitivity": 0.5458333333333333,
+        "specificity": 0.5875,
+        "threshold": 0.8501824058911779
+      },
+      {
+        "model": "et",
+        "features": 16,
+        "subject_auc": 0.7250000000000001,
+        "subject_auc_sd": 0.07246137620599453,
+        "accuracy": 0.628125,
+        "sensitivity": 0.6208333333333333,
+        "specificity": 0.65,
+        "threshold": 0.7878324062111158
+      },
+      {
+        "model": "gb",
+        "features": 16,
+        "subject_auc": 0.5744791666666667,
+        "subject_auc_sd": 0.06738907101571524,
+        "accuracy": 0.60625,
+        "sensitivity": 0.65,
+        "specificity": 0.475,
+        "threshold": 0.777449018598895
+      }
+    ]
+  }
+}

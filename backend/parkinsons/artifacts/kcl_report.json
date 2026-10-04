@@ -1,0 +1,119 @@
+{
+  "n_runs": 15,
+  "fold_subject_auc": {
+    "mean": 0.8852777777777779,
+    "std": 0.11609848416190179,
+    "min": 0.7333333333333333,
+    "max": 1.0,
+    "n_folds": 15
+  },
+  "pooled_oof_auc_per_seed": {
+    "values": [
+      0.8333,
+      0.8869,
+      0.8304
+    ],
+    "mean": 0.8501984126984127,
+    "std": 0.025983731852596826
+  },
+  "at_nested_thresholds": {
+    "n_decisions": 111,
+    "accuracy": 0.6936936936936937,
+    "sensitivity": 0.6666666666666666,
+    "specificity": 0.7142857142857143
+  },
+  "mean_nested_threshold": 0.3498426833296334,
+  "recording_level_ReadText": {
+    "auc": 0.8158068783068783,
+    "n": 111,
+    "accuracy": 0.7387387387387387,
+    "sensitivity": 0.625,
+    "specificity": 0.8253968253968254
+  },
+  "recording_level_SpontaneousDialogue": {
+    "auc": 0.8437389770723104,
+    "n": 108,
+    "accuracy": 0.7314814814814815,
+    "sensitivity": 0.7333333333333333,
+    "specificity": 0.7301587301587301
+  },
+  "pd_mean_prob_by_severity_code": {
+    "2": {
+      "n": 48,
+      "mean_prob": 0.431
+    },
+    "3": {
+      "n": 36,
+      "mean_prob": 0.579
+    },
+    "4": {
+      "n": 9,
+      "mean_prob": 0.861
+    }
+  },
+  "hardest_speakers": [
+    {
+      "subject": "ID17",
+      "label": 1,
+      "mean_prob": 0.278,
+      "flag_rate": 0.0
+    },
+    {
+      "subject": "ID30",
+      "label": 1,
+      "mean_prob": 0.224,
+      "flag_rate": 0.0
+    },
+    {
+      "subject": "ID36",
+      "label": 0,
+      "mean_prob": 0.494,
+      "flag_rate": 1.0
+    },
+    {
+      "subject": "ID32",
+      "label": 1,
+      "mean_prob": 0.311,
+      "flag_rate": 0.0
+    },
+    {
+      "subject": "ID34",
+      "label": 1,
+      "mean_prob": 0.231,
+      "flag_rate": 0.0
+    },
+    {
+      "subject": "ID03",
+      "label": 0,
+      "mean_prob": 0.587,
+      "flag_rate": 1.0
+    },
+    {
+      "subject": "ID25",
+      "label": 0,
+      "mean_prob": 0.216,
+      "flag_rate": 0.67
+    },
+    {
+      "subject": "ID08",
+      "label": 0,
+      "mean_prob": 0.195,
+      "flag_rate": 0.67
+    }
+  ],
+  "external": {
+    "italian_speech_subject_level": {
+      "auc": 0.7128378378378377,
+      "n": 61,
+      "accuracy": 0.6065573770491803,
+      "sensitivity": 0.7083333333333334,
+      "specificity": 0.5405405405405406
+    },
+    "librispeech_healthy": {
+      "n_speakers": 26,
+      "false_positive_rate": 0.46153846153846156,
+      "mean_prob": 0.4120124108516253,
+      "max_prob": 0.8757379055023193
+    }
+  }
+}

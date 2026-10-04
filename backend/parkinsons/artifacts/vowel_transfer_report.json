@@ -1,0 +1,7 @@
+{
+  "uci_model_on_italian_subject_auc": 0.26704545454545453,
+  "praat_features_in_domain_italian_auc": 0.9708333333333332,
+  "italian_model_on_uci_subject_auc": 0.41145833333333337,
+  "n_italian_recordings": 495,
+  "n_italian_subjects": 46
+}

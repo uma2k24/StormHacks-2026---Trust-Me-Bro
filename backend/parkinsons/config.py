@@ -2,6 +2,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "Italian%20Parkinson%27s%20Voice%20and%20speech"
+KCL_DIR = ROOT / "data" / "external" / "mdvr_kcl" / "26-29_09_2017_KCL"
+LIBRISPEECH_DIR = ROOT / "data" / "external" / "LibriSpeech" / "dev-clean-2"
+MDVR_DIR = ROOT / "data" / "external" / "mdvr_kcl"
+LIBRI_DIR = ROOT / "data" / "external" / "LibriSpeech" / "dev-clean-2"
 PKG_DIR = Path(__file__).resolve().parent
 CACHE_DIR = PKG_DIR / "cache"
 ARTIFACTS_DIR = PKG_DIR / "artifacts"
@@ -33,3 +37,4 @@ GROUPS = {
 }
 
 TASK_GROUPS = {"vowel": 0.35, "ddk": 0.15, "speech": 0.50}
+SOURCE_WEIGHTS = {"italian": 0.40, "mdvr": 0.35, "libri": 0.25}

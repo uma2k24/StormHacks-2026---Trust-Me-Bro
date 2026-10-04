@@ -22,8 +22,10 @@ enum ParkinsonVoiceScreenerError: Error {
 /// Runs `ParkinsonVoiceClassifier.mlmodel` over a recording.
 ///
 /// The model takes exactly 4 s of 16 kHz mono Float32 audio and computes its own
-/// log-mel features. Window selection below must stay in sync with
-/// `backend/parkinsons/data.py` (`voiced_mask` / `valid_window_starts`).
+/// log-mel features. Window selection below mirrors `backend/parkinsons/kcl_data.py`
+/// (`voiced_mask` / `window_starts`), which references a high percentile instead of the
+/// loudest frame. The web demo still uses the `data.py` variant; on clean recordings the
+/// two agree to within 0.004 probability.
 final class ParkinsonVoiceScreener {
     static let sampleRate: Double = 16_000
     static let windowSamples = 64_000
@@ -32,8 +34,10 @@ final class ParkinsonVoiceScreener {
 
     private static let vadFrame = 400
     private static let vadHop = 160
-    private static let vadDbBelowMax: Float = 35
+    private static let vadDbBelowReference: Float = 35
+    private static let vadReferencePercentile = 0.95
     private static let vadMinVoicedFraction: Float = 0.6
+    private static let minimumWindows = 3
 
     static var cpuConfiguration: MLModelConfiguration {
         let configuration = MLModelConfiguration()
@@ -121,7 +125,15 @@ final class ParkinsonVoiceScreener {
             let energy = (squares[s + vadFrame] - squares[s]) / Double(vadFrame)
             db[f] = Float(10 * log10(energy + 1e-10))
         }
-        let cutoff = (db.max() ?? 0) - vadDbBelowMax
+        // Reference a high percentile, not the loudest frame, so one cough or door slam
+        // cannot mute the rest of the recording. Mirrors voiced_mask in kcl_data.py.
+        let sorted = db.sorted()
+        let position = vadReferencePercentile * Double(sorted.count - 1)
+        let lower = Int(position.rounded(.down))
+        let upper = min(lower + 1, sorted.count - 1)
+        let blend = Float(position - Double(lower))
+        let reference = sorted[lower] + (sorted[upper] - sorted[lower]) * blend
+        let cutoff = reference - vadDbBelowReference
         var voicedSum = [Float](repeating: 0, count: frameCount + 1)
         for f in 0..<frameCount {
             voicedSum[f + 1] = voicedSum[f] + (db[f] > cutoff ? 1 : 0)
@@ -129,15 +141,19 @@ final class ParkinsonVoiceScreener {
 
         let framesPerWindow = (windowSamples - vadFrame) / vadHop + 1
         var kept: [Int] = []
-        var best = (start: 0, fraction: Float(-1))
+        var scored: [(start: Int, fraction: Float)] = []
         for start in stride(from: 0, through: audio.count - windowSamples, by: hopSamples) {
             let first = start / vadHop
             let last = min(first + framesPerWindow, frameCount)
             let fraction = (voicedSum[last] - voicedSum[first]) / Float(framesPerWindow)
             if fraction >= vadMinVoicedFraction { kept.append(start) }
-            if fraction > best.fraction { best = (start, fraction) }
+            scored.append((start, fraction))
         }
-        return kept.isEmpty ? [best.start] : kept
+        if kept.count >= minimumWindows { return kept }
+        return scored.sorted { $0.fraction > $1.fraction }
+            .prefix(min(minimumWindows, scored.count))
+            .map(\.start)
+            .sorted()
     }
 
     // MARK: - Audio loading
