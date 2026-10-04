@@ -18,7 +18,7 @@ const display = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Morning Radio",
+  title: "MORNING RADIO",
   description:
     "A personal morning radio show: local weather, scores and news, read aloud.",
 };

@@ -13,7 +13,7 @@ import { SignUpScreen } from "@/components/SignUpScreen";
 import { TodayScreen } from "@/components/TodayScreen";
 import { UploadScreen } from "@/components/UploadScreen";
 import { type Briefing, type BriefingSegment, mockBriefingFor } from "@/data/checkInScript";
-import { demoHistory, lastSevenDays, planForToday, streakOf, trendBefore, yesterdayScore } from "@/data/daily";
+import { demoHistory, lastSevenDays, pastDay, planForToday, streakOf, trendBefore, yesterdayScore } from "@/data/daily";
 import {
   type AnswerTiming,
   chooseInterests,
@@ -91,6 +91,8 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<VoiceAnalysis | null>(null);
   // Set when an uploaded recording couldn't be checked: Processing then goes back to Upload, not to the results.
   const [uploadProblem, setUploadProblem] = useState<string | null>(null);
+  // A lamp from the week that has been tapped: that morning's results are showing instead of today's.
+  const [reviewDay, setReviewDay] = useState<string | null>(null);
   // The day this page opened on: a tab left open overnight keeps the show it has.
   const [today] = useState(dayKey);
   // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
@@ -121,6 +123,18 @@ export default function Home() {
   const results = analysis
     ? resultsFrom(profile?.name ?? "", analysis, trendBefore(history, today), yesterdayScore(history, today))
     : { ...mockResults, user: profile?.name ?? "" };
+  // An earlier morning looked at again, worked out from the numbers kept with it.
+  const reviewed = reviewDay ? history[reviewDay]?.analysis : undefined;
+  const reviewResults =
+    reviewDay && reviewed
+      ? resultsFrom(
+          profile?.name ?? "",
+          reviewed,
+          trendBefore(history, reviewDay),
+          yesterdayScore(history, reviewDay),
+          pastDay(reviewDay),
+        )
+      : null;
   const todaysList = planForToday({
     profile: profile ?? demoProfile,
     status: results.statusColor,
@@ -221,7 +235,7 @@ export default function Home() {
         analyseVoice(captured).then((outcome) => {
           if (outcome.status !== "done") return;
           setAnalysis(outcome.analysis);
-          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true);
+          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true, outcome.analysis);
         }),
       );
       setScreen("processing");
@@ -241,7 +255,7 @@ export default function Home() {
           }
           if (!doneToday) setLightLamp(true);
           setAnalysis(outcome.analysis);
-          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true);
+          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true, outcome.analysis);
         }),
       );
       setScreen("processing");
@@ -255,6 +269,14 @@ export default function Home() {
   }, []);
   const showResults = useCallback(() => setScreen(uploadProblem ? "upload" : "results"), [uploadProblem]);
   const goHome = useCallback(() => setScreen("idle"), []);
+  const openDay = useCallback((day: string) => {
+    setReviewDay(day);
+    setScreen("results");
+  }, []);
+  const leaveReview = useCallback(() => {
+    setReviewDay(null);
+    setScreen("idle");
+  }, []);
   const openToday = useCallback(() => setScreen("today"), []);
   const openSettings = useCallback(() => setScreen("settings"), []);
   const tick = useCallback(
@@ -300,6 +322,7 @@ export default function Home() {
               streak={streakOf(history, today)}
               lightToday={lightLamp}
               onLampLit={lampLit}
+              onOpenDay={openDay}
               listDone={todaysList.filter((item) => ticked.includes(item.id)).length}
               listTotal={todaysList.length}
               onStart={startCheckIn}
@@ -325,7 +348,11 @@ export default function Home() {
           {current === "processing" ? <ProcessingScreen work={work} onComplete={showResults} /> : null}
 
           {current === "results" && profile ? (
-            <ResultsDashboard results={results} onFinish={openToday} />
+            reviewResults ? (
+              <ResultsDashboard key={reviewDay} results={reviewResults} onFinish={leaveReview} />
+            ) : (
+              <ResultsDashboard key="today" results={results} onFinish={openToday} />
+            )
           ) : null}
 
           {current === "today" && profile ? (

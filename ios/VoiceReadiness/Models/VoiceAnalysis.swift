@@ -1,9 +1,10 @@
 import Foundation
 
 /// What POST /api/voice/analyze answers: the classifier's number, and jitter / shimmer / HNR.
-/// Mirrors frontend/src/types/voice.ts.
-struct VoiceAnalysis: Decodable {
-    struct Task: Decodable {
+/// Mirrors frontend/src/types/voice.ts. Also kept on the device with each morning's check-in
+/// (see DayRecord), so a morning can be looked at again from the week's lamps.
+struct VoiceAnalysis: Codable, Equatable {
+    struct Task: Codable, Equatable {
         /// "vowel" or "speech"
         let id: String
         /// The classifier's number for this part of the check-in, 0...1.
@@ -16,7 +17,7 @@ struct VoiceAnalysis: Decodable {
         let windows: Int
     }
 
-    struct Measures: Decodable {
+    struct Measures: Codable, Equatable {
         let jitter: Double
         let shimmer: Double
         let hnr: Double

@@ -45,9 +45,9 @@ enum StatusColor {
 
     var label: String {
         switch self {
-        case .green: return "Ready"
-        case .yellow: return "Pay Attention"
-        case .red: return "Rest Recommended"
+        case .green: return "Little to No Risk"
+        case .yellow: return "Low Risk"
+        case .red: return "Treatment Recommended"
         }
     }
 }
@@ -128,6 +128,14 @@ struct TrendPoint: Identifiable {
     let score: Int
 }
 
+/// Which past morning a dashboard is for, so its wording says "Saturday" and not "today".
+struct PastDay: Equatable {
+    /// "Saturday"
+    let name: String
+    /// "Oct 3", for the heading and the label on the trend chart
+    let short: String
+}
+
 struct ScreeningResults {
     enum Source {
         /// Worked out from the listener's voice today.
@@ -147,6 +155,8 @@ struct ScreeningResults {
     let trendData: [TrendPoint]
     let yesterdayScore: Int
     let yesterdayLabel: String
+    /// Set when these are an earlier morning's results being looked at again; nil for this morning's own.
+    var past: PastDay? = nil
 
     /// The same results, addressed to whoever signed up.
     func addressed(to name: String) -> ScreeningResults {
@@ -160,7 +170,8 @@ struct ScreeningResults {
             detail: detail,
             trendData: trendData,
             yesterdayScore: yesterdayScore,
-            yesterdayLabel: yesterdayLabel
+            yesterdayLabel: yesterdayLabel,
+            past: past
         )
     }
 

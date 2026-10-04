@@ -38,6 +38,14 @@ export type ResultDetail = {
   tasks: { label: string; probability: number; /** 0...1 */ weight: number }[];
 };
 
+/** Which past morning a dashboard is for, so its wording says "Saturday" and not "today". */
+export type PastDay = {
+  /** "Saturday" */
+  name: string;
+  /** "Oct 3", for the heading and the label on the trend chart */
+  short: string;
+};
+
 export type ScreeningResults = {
   /** "measured" is worked out from the listener's voice today; "sample" is placeholder numbers (nothing could be measured). */
   source: "measured" | "sample";
@@ -55,4 +63,6 @@ export type ScreeningResults = {
   trendData: TrendPoint[];
   yesterdayScore: number;
   yesterdayLabel: string;
+  /** Set when these are an earlier morning's results being looked at again; absent for this morning's own. */
+  past?: PastDay;
 };

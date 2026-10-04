@@ -1,34 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, ListChecks } from "lucide-react";
+import { ArrowLeft, ArrowRight, House, ListChecks } from "lucide-react";
 import { AiSummaryCard } from "@/components/AiSummaryCard";
 import { ReadinessDial } from "@/components/ReadinessDial";
 import { TrendChart } from "@/components/TrendChart";
 import { VitalDetail } from "@/components/VitalDetail";
 import { VitalsGrid } from "@/components/VitalsGrid";
 import { MEASURES } from "@/data/voiceReading";
-import type { MeasureKey, ScreeningResults } from "@/types/screening";
+import { unlockRadioVoice } from "@/lib/radioVoice";
+import type { MeasureKey, PastDay, ScreeningResults } from "@/types/screening";
 
 type ResultsDashboardProps = {
   results: ScreeningResults;
-  /** After the last page: on to the day's list. */
+  /**
+   * After the last page: on to the day's list. For an earlier morning looked at again (`results.past`)
+   * there is no list to go on to, so this goes back home, and the first page's back arrow does too.
+   */
   onFinish: () => void;
 };
 
 /** One thing at a time: the score first, then the details, each on its own page. */
-const PAGE_TITLES = [
-  "Today's readiness",
-  "Your voice summary",
-  "Today's vitals",
-  "Readiness over 14 days",
-] as const;
+function pageTitles(past?: PastDay): string[] {
+  const whose = past ? `${past.name}'s` : "Today's";
+  return [`${whose} readiness`, "Your voice summary", `${whose} vitals`, "Readiness over 14 days"];
+}
 
 export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
   const [page, setPage] = useState(0);
   // A vital that has been tapped: its numbers replace the page until they go back.
   const [detail, setDetail] = useState<MeasureKey | null>(null);
-  const isLast = page === PAGE_TITLES.length - 1;
+  const past = results.past;
+  const titles = pageTitles(past);
+  const isLast = page === titles.length - 1;
 
   // the numbers start at the top, not wherever the vitals page was scrolled to
   useEffect(() => {
@@ -40,7 +44,7 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
       <p className="sr-only" aria-live="polite">
         {detail
           ? `The numbers for ${MEASURES[detail].label}`
-          : `Page ${page + 1} of ${PAGE_TITLES.length}: ${PAGE_TITLES[page]}`}
+          : `Page ${page + 1} of ${titles.length}: ${titles[page]}`}
       </p>
 
       <div className="pager-stage" key={detail ?? page}>
@@ -52,13 +56,20 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
         ) : page === 0 ? (
           <>
             <header className="pop-in text-center">
-              <h1 className="display h2">
-                Thanks, <span className="marker">{results.user}</span>!
-              </h1>
+              {past ? (
+                <h1 className="display h2">
+                  {past.name}, <span className="marker">{past.short}</span>
+                </h1>
+              ) : (
+                <h1 className="display h2">
+                  Thanks, <span className="marker">{results.user}</span>!
+                </h1>
+              )}
             </header>
             <ReadinessDial
               score={results.readinessScore}
               statusColor={results.statusColor}
+              past={past}
             />
             {results.source === "sample" ? (
               <p className="m-0 -mt-3 text-center text-[1.05rem] leading-snug text-[var(--ink-soft)]">
@@ -67,12 +78,12 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
             ) : null}
           </>
         ) : (
-          <h1 className="sr-only">{PAGE_TITLES[page]}</h1>
+          <h1 className="sr-only">{titles[page]}</h1>
         )}
 
-        {!detail && page === 1 ? <AiSummaryCard summary={results.aiSummary} /> : null}
-        {!detail && page === 2 ? <VitalsGrid metrics={results.metrics} onOpen={setDetail} /> : null}
-        {!detail && page === 3 ? <TrendChart data={results.trendData} /> : null}
+        {!detail && page === 1 ? <AiSummaryCard summary={results.aiSummary} autoRead={!past} /> : null}
+        {!detail && page === 2 ? <VitalsGrid metrics={results.metrics} onOpen={setDetail} past={past} /> : null}
+        {!detail && page === 3 ? <TrendChart data={results.trendData} past={past} /> : null}
       </div>
 
       <nav className="pager-nav" aria-label="Results pages">
@@ -90,11 +101,11 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
               role="progressbar"
               aria-label="Results progress"
               aria-valuemin={1}
-              aria-valuemax={PAGE_TITLES.length}
+              aria-valuemax={titles.length}
               aria-valuenow={page + 1}
-              aria-valuetext={`Page ${page + 1} of ${PAGE_TITLES.length}`}
+              aria-valuetext={`Page ${page + 1} of ${titles.length}`}
             >
-              {PAGE_TITLES.map((title, index) => (
+              {titles.map((title, index) => (
                 <span
                   key={title}
                   className="dot"
@@ -104,12 +115,12 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
             </div>
 
             <div className="pager-buttons">
-              {page > 0 ? (
+              {page > 0 || past ? (
                 <button
                   type="button"
-                  onClick={() => setPage((value) => value - 1)}
+                  onClick={() => (page > 0 ? setPage((value) => value - 1) : onFinish())}
                   className="btn btn-back"
-                  aria-label="Back"
+                  aria-label={page > 0 ? "Back" : "Back home"}
                 >
                   <ArrowLeft className="h-7 w-7" strokeWidth={2.75} aria-hidden="true" />
                 </button>
@@ -117,13 +128,21 @@ export function ResultsDashboard({ results, onFinish }: ResultsDashboardProps) {
 
               {isLast ? (
                 <button type="button" onClick={onFinish} className="btn btn-accent flex-1">
-                  <ListChecks className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
-                  Your day
+                  {past ? (
+                    <House className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
+                  ) : (
+                    <ListChecks className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
+                  )}
+                  {past ? "Back home" : "Your day"}
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setPage((value) => value + 1)}
+                  onClick={() => {
+                    // Next into the summary: unlock in this tap so autoplay is allowed
+                    if (page === 0) unlockRadioVoice();
+                    setPage((value) => value + 1);
+                  }}
                   className="btn btn-accent flex-1"
                 >
                   Next

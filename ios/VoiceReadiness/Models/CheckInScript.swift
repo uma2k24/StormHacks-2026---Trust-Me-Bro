@@ -430,10 +430,10 @@ enum CheckInScript {
                 MockLine(
                     brief: "A good community is built from small things, like a friendly wave or a chat over the fence.",
                     question: "Who's a neighbour or a local face you enjoy seeing?",
-                    mockReply: "The lady next door. We swap recipes and talk about the garden."
+                    mockReply: "The lady next door. We chat about the weather and her dog."
                 ),
                 MockLine(
-                    brief: "Markets, parks and libraries are part of what makes a town special.",
+                    brief: "Libraries, trails and community centres are part of what makes a town special.",
                     question: "What do you like most about the place where you live?",
                     mockReply: "How friendly everyone is. You can't walk to the shops without a chat."
                 ),
@@ -443,19 +443,19 @@ enum CheckInScript {
                     mockReply: "The shops on the main street. Some of my old favourites are gone now."
                 ),
                 MockLine(
-                    brief: "There's often something going on close to home, from a market to a concert in the park.",
+                    brief: "There's often something going on close to home, from a library talk to a concert in the park.",
                     question: "What do you enjoy doing in your neighbourhood?",
                     mockReply: "A stroll to the park, and a sit on my favourite bench."
                 ),
                 MockLine(
-                    brief: "A friendly shop or a favourite bench can turn a short outing into a nice one.",
+                    brief: "A quiet trail or a favourite bench can turn a short outing into a nice one.",
                     question: "Where would you take a visitor to show off your area?",
-                    mockReply: "Down to the water, and then for a pastry at the bakery."
+                    mockReply: "Down to the water, then along the path under the trees."
                 ),
                 MockLine(
                     brief: "A friendly hello on the street can brighten a whole morning.",
                     question: "Who do you like to say hello to when you're out?",
-                    mockReply: "The man at the bakery. He always asks after my garden."
+                    mockReply: "The fellow who walks his spaniel past my gate every day."
                 )
             ]
         ),

@@ -3,6 +3,8 @@ import SwiftUI
 
 struct TrendChartView: View {
     let data: [TrendPoint]
+    /// An earlier morning being looked at again: the chart ends on that day rather than today.
+    var past: PastDay?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var reveal: CGFloat = 0
@@ -19,7 +21,7 @@ struct TrendChartView: View {
         RetroWindow(title: "Readiness Over 14 Days") {
             VStack(alignment: .leading, spacing: 20) {
                 Text(data.count == 1
-                    ? "This is your first reading. Every morning adds another dot."
+                    ? (past != nil ? "That was your first reading." : "This is your first reading. Every morning adds another dot.")
                     : "A simple look at how your score has been trending.")
                     .font(AppFont.body(18))
                     .foregroundStyle(AppTheme.inkSoft)
@@ -36,8 +38,8 @@ struct TrendChartView: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(
                         data.count == 1
-                            ? "Line chart of your readiness. Today is \(data.last?.score ?? 0), your first reading."
-                            : "Line chart of your readiness since \(startLabel). It started at \(data.first?.score ?? 0) and today is \(data.last?.score ?? 0)."
+                            ? "Line chart of your readiness. \(past?.name ?? "Today") is \(data.last?.score ?? 0), your first reading."
+                            : "Line chart of your readiness since \(startLabel). It started at \(data.first?.score ?? 0) and \(past?.name ?? "today") is \(data.last?.score ?? 0)."
                     )
             }
         }

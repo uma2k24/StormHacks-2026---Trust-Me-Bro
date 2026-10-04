@@ -110,9 +110,9 @@ export async function speak(
 }
 
 /**
- * Reads something aloud because the listener asked (the voice summary): the radio's voice when there
- * is one, otherwise the device's own voice, so pressing Play is never silent. Call unlockRadioVoice()
- * in the same tap. `onProgress` works as it does for speak().
+ * Reads something aloud (the voice summary): the radio's voice when there is one, otherwise the
+ * device's own voice, so it is never silent. Call unlockRadioVoice() from a tap before autoplay.
+ * `onProgress` works as it does for speak().
  */
 export async function readAloud(
   text: string,

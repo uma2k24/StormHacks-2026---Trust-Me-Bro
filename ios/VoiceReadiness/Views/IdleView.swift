@@ -16,6 +16,8 @@ struct IdleView: View {
     /// Today's show has only just been heard: today's lamp lights up as home appears (once).
     let lightToday: Bool
     let onLampLit: () -> Void
+    /// A lamp for an earlier morning was tapped: look at that morning's results again.
+    let onOpenDay: (String) -> Void
     /// How many of today's little things are ticked off, out of how many.
     let listDone: Int
     let listTotal: Int
@@ -51,7 +53,7 @@ struct IdleView: View {
                         Spacer(minLength: 12)
 
                         if doneToday {
-                            WeekLamps(week: week, streak: streak, lightToday: lightToday, onLit: onLampLit)
+                            WeekLamps(week: week, streak: streak, lightToday: lightToday, onLit: onLampLit, onOpen: onOpenDay)
                         } else if playReady {
                             lineup
                         } else {
@@ -278,12 +280,15 @@ struct IdleView: View {
 
 /// The last seven mornings as a row of radio lamps: lit with a tick for a morning they tuned in,
 /// dark for one they didn't. Kind on purpose: it celebrates the mornings that happened and never
-/// scolds about the ones that didn't. Mirrors WeekLamps.tsx.
+/// scolds about the ones that didn't. A lamp for a morning whose numbers were kept is a button that
+/// opens that morning's results; the others are just lamps. Mirrors WeekLamps.tsx.
 struct WeekLamps: View {
     let week: [Daily.WeekDay]
     let streak: Int
     /// Told when today's lamp has started lighting, so it doesn't light up again next time.
     let onLit: () -> Void
+    /// A morning whose numbers were kept can be tapped to look at them again; this is told which one.
+    let onOpen: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .body) private var lampSize: CGFloat = 34
@@ -293,10 +298,17 @@ struct WeekLamps: View {
     @State private var warmedUp = false
     @State private var glowing = false
 
-    init(week: [Daily.WeekDay], streak: Int, lightToday: Bool = false, onLit: @escaping () -> Void = {}) {
+    init(
+        week: [Daily.WeekDay],
+        streak: Int,
+        lightToday: Bool = false,
+        onLit: @escaping () -> Void = {},
+        onOpen: @escaping (String) -> Void = { _ in }
+    ) {
         self.week = week
         self.streak = streak
         self.onLit = onLit
+        self.onOpen = onOpen
         _lighting = State(initialValue: lightToday)
     }
 
@@ -310,56 +322,20 @@ struct WeekLamps: View {
                 .font(AppFont.head(23, relativeTo: .title3))
                 .foregroundStyle(AppTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
 
             HStack(spacing: 0) {
                 ForEach(Array(week.enumerated()), id: \.element.id) { index, day in
-                    let lit = day.listened && !(day.today && lighting && !warmedUp)
-
-                    VStack(spacing: 7) {
-                        // as big as it can be up to `lamp`, shrinking to share the row seven ways
-                        Circle()
-                            .fill(lit ? AppTheme.teal : AppTheme.paperDeep)
-                            .overlay { Circle().stroke(AppTheme.ink, lineWidth: 2.5) }
-                            .overlay {
-                                if day.listened {
-                                    GeometryReader { box in
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: box.size.width * 0.45, weight: .black))
-                                            .foregroundStyle(AppTheme.ink)
-                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    }
-                                    .opacity(lit ? 1 : 0)
-                                    .scaleEffect(lit ? 1 : 0.5)
-                                }
-                            }
-                            .background {
-                                if day.listened {
-                                    Circle().fill(AppTheme.tealSoft).padding(-4).opacity(lit ? 1 : 0)
-                                }
-                            }
-                            // the soft glow as today's lamp warms up, settling into the steady ring
-                            .background {
-                                if day.today && lighting {
-                                    Circle()
-                                        .fill(AppTheme.tealGlow)
-                                        .padding(-10)
-                                        .blur(radius: 8)
-                                        .opacity(glowing ? 0.9 : 0)
-                                }
-                            }
-                            // today wears a coral ring
-                            .overlay {
-                                if day.today { Circle().stroke(AppTheme.accent, lineWidth: 3).padding(-6) }
-                            }
-                            .aspectRatio(1, contentMode: .fit)
-                            .frame(maxWidth: lamp)
-                            .padding(6)
-
-                        Text(day.label)
-                            .font(AppFont.body(16, bold: true))
-                            .underline(day.today, color: AppTheme.accent)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                    Group {
+                        if day.canOpen {
+                            Button { onOpen(day.day) } label: { column(for: day, lamp: lamp) }
+                                .buttonStyle(LampButtonStyle())
+                                .accessibilityLabel("See \(day.today ? "today" : day.name)’s results")
+                        } else {
+                            column(for: day, lamp: lamp)
+                                // the group's label says it all, so only a lamp that can be tapped is left for VoiceOver
+                                .accessibilityHidden(true)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     // the lamps light up one after another
@@ -375,9 +351,63 @@ struct WeekLamps: View {
         .hardShadow(card, offset: 5)
         .padding(.trailing, 5)
         .popIn(1)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("This week: you tuned in \(listened) of the last 7 mornings. \(Daily.streakLine(streak))")
         .onAppear(perform: lightUp)
+    }
+
+    /// One day of the week: its lamp over its name.
+    private func column(for day: Daily.WeekDay, lamp: CGFloat) -> some View {
+        let lit = day.listened && !(day.today && lighting && !warmedUp)
+
+        return VStack(spacing: 7) {
+            // as big as it can be up to `lamp`, shrinking to share the row seven ways
+            Circle()
+                .fill(lit ? AppTheme.teal : AppTheme.paperDeep)
+                .overlay { Circle().stroke(AppTheme.ink, lineWidth: 2.5) }
+                .overlay {
+                    if day.listened {
+                        GeometryReader { box in
+                            Image(systemName: "checkmark")
+                                .font(.system(size: box.size.width * 0.45, weight: .black))
+                                .foregroundStyle(AppTheme.ink)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .opacity(lit ? 1 : 0)
+                        .scaleEffect(lit ? 1 : 0.5)
+                    }
+                }
+                .background {
+                    if day.listened {
+                        Circle().fill(AppTheme.tealSoft).padding(-4).opacity(lit ? 1 : 0)
+                    }
+                }
+                // the soft glow as today's lamp warms up, settling into the steady ring
+                .background {
+                    if day.today && lighting {
+                        Circle()
+                            .fill(AppTheme.tealGlow)
+                            .padding(-10)
+                            .blur(radius: 8)
+                            .opacity(glowing ? 0.9 : 0)
+                    }
+                }
+                // today wears a coral ring
+                .overlay {
+                    if day.today { Circle().stroke(AppTheme.accent, lineWidth: 3).padding(-6) }
+                }
+                .aspectRatio(1, contentMode: .fit)
+                .frame(maxWidth: lamp)
+                .padding(6)
+
+            Text(day.label)
+                .font(AppFont.body(16, bold: true))
+                .underline(day.today, color: AppTheme.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
     }
 
     /// Just after the show: once the row has popped in, today's lamp warms up with a soft glow that
@@ -398,5 +428,16 @@ struct WeekLamps: View {
                 withAnimation(.easeOut(duration: 0.7)) { glowing = false }
             }
         }
+    }
+}
+
+/// A lamp that can be opened: it dips a little while pressed, like a button on a radio.
+private struct LampButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(AppTheme.ink)
+            .scaleEffect(configuration.isPressed ? 0.88 : 1)
+            .animation(.easeOut(duration: 0.09), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed) { _, isDown in isDown }
     }
 }

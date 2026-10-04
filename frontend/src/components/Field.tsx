@@ -32,7 +32,7 @@ export function Field({
   error,
   maxLength = 60,
   type = "text",
-  autoComplete,
+  autoComplete = "off",
   autoFocus,
   inputRef,
   onEnter,

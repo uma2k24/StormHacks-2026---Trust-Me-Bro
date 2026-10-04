@@ -132,8 +132,8 @@ enum VoiceReading {
     // MARK: The score
 
     /// Readiness, 0...100, from the classifier's number. It is anchored on the decision threshold, so
-    /// "flagged" always lands in Rest Recommended: a number half-way to the threshold is the edge of
-    /// Ready (80), the threshold itself is the edge of Pay Attention (60), and 1.0 is 20.
+    /// "flagged" always lands in Treatment Recommended: a number half-way to the threshold is the edge of
+    /// Little to No Risk (80), the threshold itself is the edge of Low Risk (60), and 1.0 is 20.
     static func readiness(probability: Double, threshold: Double) -> Int {
         let p = min(1, max(0, probability))
         let half = threshold / 2
@@ -167,12 +167,29 @@ enum VoiceReading {
         }
     }
 
+    /// The same summary for a morning that is over: it says the day's name rather than "today" and
+    /// leaves out the advice for the day ahead. Mirrors summaryForPast() on the web.
+    private static func summaryForPast(score: Int, trouble: String, first: Bool, day: String) -> String {
+        let lead = trouble.isEmpty ? "" : " \(trouble.prefix(1).uppercased() + trouble.dropFirst())."
+        if score >= 80 {
+            return trouble.isEmpty
+                ? "Your voice sounded clear and steady on \(day). Nothing stood out."
+                : "Your voice sounded mostly clear and steady on \(day).\(lead) Nothing to worry about."
+        }
+        if score >= 60 {
+            return "Your voice sounded \(first ? "a little tired" : "a little different from usual") on \(day).\(lead)"
+        }
+        return "Your voice sounded \(first ? "quite tired" : "quite different from usual") on \(day).\(lead) If it keeps up, mention it to someone you trust or your doctor."
+    }
+
     /// The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion. On the
     /// very first check-in (`first`) it never compares with "usual", because there is nothing yet to
-    /// compare with. Mirrors summaryFor() on the web.
-    static func summary(score: Int, metrics: [Metric], first: Bool = false) -> String {
+    /// compare with. Looking back at an earlier morning (`past`), it is about that day.
+    /// Mirrors summaryFor() on the web.
+    static func summary(score: Int, metrics: [Metric], first: Bool = false, past: PastDay? = nil) -> String {
         let off = metrics.filter(\.isWarning).map { trouble($0.key, first: first) }
         let trouble = joined(off)
+        if let past { return summaryForPast(score: score, trouble: trouble, first: first, day: past.name) }
         let lead = trouble.isEmpty ? "" : "Today \(trouble)."
 
         if score >= 80 {
@@ -191,14 +208,15 @@ enum VoiceReading {
 
     /// Short Parkinson’s line for the overview, next to the score. Never a diagnosis, just how
     /// today’s voice patterns compare. Mirrors parkinsonsIndication() in voiceReading.ts.
-    static func parkinsonsIndication(score: Int) -> String {
+    static func parkinsonsIndication(score: Int, past: PastDay? = nil) -> String {
+        let when = past.map { "\($0.name)’s" } ?? "Today’s"
         if score >= 80 {
-            return "You most likely don’t have Parkinson’s. Today’s voice patterns look typical."
+            return "You most likely don’t have Parkinson’s. \(when) voice patterns look typical."
         }
         if score >= 60 {
             return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off."
         }
-        return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up."
+        return "\(when) patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up."
     }
 
     /// "Borderline", and why, for the top of the details. Nil when nothing was measured.
@@ -245,13 +263,15 @@ enum VoiceReading {
         )
     }
 
-    /// The dashboard for one measured check-in. `earlier` are the days before today that were measured
-    /// (oldest first); `yesterday` is yesterday's score, when there is one.
+    /// The dashboard for one measured check-in. `earlier` are the days before it that were measured
+    /// (oldest first); `yesterday` is the score of the day before, when there is one. `past` is given
+    /// when it is an earlier morning being looked at again, and the dashboard then speaks of that day.
     static func results(
         user: String,
         analysis: VoiceAnalysis,
         earlier: [TrendPoint],
-        yesterday: Int?
+        yesterday: Int?,
+        past: PastDay? = nil
     ) -> ScreeningResults {
         let score = readiness(probability: analysis.probability, threshold: analysis.threshold)
         let metrics = [
@@ -268,7 +288,7 @@ enum VoiceReading {
             readinessScore: score,
             statusColor: status,
             // nothing earlier to compare with: the very first measured morning
-            aiSummary: summary(score: score, metrics: metrics, first: earlier.isEmpty),
+            aiSummary: summary(score: score, metrics: metrics, first: earlier.isEmpty, past: past),
             metrics: metrics,
             detail: ResultDetail(
                 probability: analysis.probability,
@@ -277,9 +297,10 @@ enum VoiceReading {
                     ResultDetail.Task(label: labels[$0.id] ?? $0.id, probability: $0.probability, weight: $0.weight)
                 }
             ),
-            trendData: earlier + [TrendPoint(day: "Today", score: score)],
+            trendData: earlier + [TrendPoint(day: past?.short ?? "Today", score: score)],
             yesterdayScore: yesterday ?? score,
-            yesterdayLabel: StatusColor(score: yesterday ?? score).label
+            yesterdayLabel: StatusColor(score: yesterday ?? score).label,
+            past: past
         )
     }
 }

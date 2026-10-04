@@ -99,7 +99,6 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
                 placeholder="David"
                 error={nameError}
                 maxLength={40}
-                autoComplete="given-name"
                 autoFocus
                 onEnter={next}
               />
@@ -122,7 +121,6 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
                 value={draft.city}
                 onChange={(city) => update({ city })}
                 placeholder="Burnaby, BC"
-                autoComplete="address-level2"
                 autoFocus
                 onEnter={next}
               />
@@ -192,7 +190,6 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
                 onChange={(familyPhone) => update({ familyPhone })}
                 placeholder="604 555 0134"
                 maxLength={24}
-                autoComplete="tel"
                 onEnter={next}
               />
             </div>

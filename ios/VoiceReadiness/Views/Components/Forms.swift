@@ -17,7 +17,6 @@ struct LabelledField: View {
     var capitalization: TextInputAutocapitalization = .words
     /// `.phonePad` brings up the number keypad.
     var keyboard: UIKeyboardType = .default
-    var contentType: UITextContentType?
     var submitLabel: SubmitLabel = .next
     var autoFocus = false
     /// Bump this number to move the cursor into the box (e.g. when there is an error to fix).
@@ -54,7 +53,6 @@ struct LabelledField: View {
             .tint(AppTheme.ink)
             .textInputAutocapitalization(capitalization)
             .keyboardType(keyboard)
-            .textContentType(contentType)
             .autocorrectionDisabled()
             .submitLabel(submitLabel)
             .focused($focused)

@@ -10,7 +10,7 @@
  */
 
 import { readinessLabel, statusColorForScore } from "@/data/mockResults";
-import type { MeasureKey, Metric, ResultDetail, ScreeningResults, TrendPoint, Zone } from "@/types/screening";
+import type { MeasureKey, Metric, PastDay, ResultDetail, ScreeningResults, TrendPoint, Zone } from "@/types/screening";
 import type { VoiceAnalysis } from "@/types/voice";
 
 export type Measure = {
@@ -123,8 +123,8 @@ export function scaleLabels(measure: Measure): { from: string; to: string } {
 
 /**
  * Readiness, 0...100, from the classifier's number. It is anchored on the decision threshold, so
- * "flagged" always lands in Rest Recommended: a number half-way to the threshold is the edge of
- * Ready (80), the threshold itself is the edge of Pay Attention (60), and 1.0 is 20.
+ * "flagged" always lands in Treatment Recommended: a number half-way to the threshold is the edge of
+ * Little to No Risk (80), the threshold itself is the edge of Low Risk (60), and 1.0 is 20.
  */
 export function readinessFrom(probability: number, threshold: number): number {
   const p = Math.min(1, Math.max(0, probability));
@@ -152,12 +152,31 @@ function joined(parts: string[]): string {
 }
 
 /**
+ * The same summary for a morning that is over: it says the day's name rather than "today" and
+ * leaves out the advice for the day ahead.
+ */
+function summaryForPast(score: number, trouble: string, first: boolean, day: string): string {
+  const lead = trouble ? ` ${trouble.charAt(0).toUpperCase()}${trouble.slice(1)}.` : "";
+  if (score >= 80) {
+    return trouble
+      ? `Your voice sounded mostly clear and steady on ${day}.${lead} Nothing to worry about.`
+      : `Your voice sounded clear and steady on ${day}. Nothing stood out.`;
+  }
+  if (score >= 60) {
+    return `Your voice sounded ${first ? "a little tired" : "a little different from usual"} on ${day}.${lead}`;
+  }
+  return `Your voice sounded ${first ? "quite tired" : "quite different from usual"} on ${day}.${lead} If it keeps up, mention it to someone you trust or your doctor.`;
+}
+
+/**
  * The plain-words summary. Never diagnostic: how the voice sounded, and a gentle suggestion. On the
  * very first check-in (`first`) it never compares with "usual", because there is nothing yet to compare with.
+ * Looking back at an earlier morning (`past`), it is about that day.
  */
-export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>, first = false): string {
+export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>, first = false, past?: PastDay): string {
   const off = MEASURE_ORDER.filter((key) => metrics[key].isWarning);
   const trouble = joined(off.map((key) => TROUBLES[key][first ? "first" : "later"]));
+  if (past) return summaryForPast(score, trouble, first, past.name);
   const lead = trouble ? `Today ${trouble}.` : "";
 
   if (score >= 80) {
@@ -177,14 +196,15 @@ export function summaryFor(score: number, metrics: Record<MeasureKey, Metric>, f
  * Short Parkinson’s line for the overview, next to the score. Never a diagnosis, just how today’s
  * voice patterns compare. Mirrored in VoiceReading.parkinsonsIndication(score:).
  */
-export function parkinsonsIndication(score: number): string {
+export function parkinsonsIndication(score: number, past?: PastDay): string {
+  const when = past ? `${past.name}’s` : "Today’s";
   if (score >= 80) {
-    return "You most likely don’t have Parkinson’s. Today’s voice patterns look typical.";
+    return `You most likely don’t have Parkinson’s. ${when} voice patterns look typical.`;
   }
   if (score >= 60) {
     return "Parkinson’s is still unlikely from this check-in, though a few patterns were a little off.";
   }
-  return "Today’s patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up.";
+  return `${when} patterns looked closer to the Parkinson’s group. This isn’t a diagnosis. Mention it to someone you trust or your doctor if it keeps up.`;
 }
 
 /** "Borderline", and why, for the top of the details. */
@@ -222,14 +242,16 @@ function metricFor(measure: Measure, value: number | undefined): Metric {
 }
 
 /**
- * The dashboard for one measured check-in. `earlier` are the days before today that were measured
- * (oldest first); `yesterday` is yesterday's score, when there is one.
+ * The dashboard for one measured check-in. `earlier` are the days before it that were measured
+ * (oldest first); `yesterday` is the score of the day before, when there is one. `past` is given when
+ * it is an earlier morning being looked at again, and the dashboard then speaks of that day.
  */
 export function resultsFrom(
   user: string,
   analysis: VoiceAnalysis,
   earlier: TrendPoint[],
   yesterday?: number,
+  past?: PastDay,
 ): ScreeningResults {
   const score = readinessFrom(analysis.probability, analysis.threshold);
   const metrics = {
@@ -254,11 +276,12 @@ export function resultsFrom(
     readinessScore: score,
     statusColor: statusColorForScore(score),
     // nothing earlier to compare with: the very first measured morning
-    aiSummary: summaryFor(score, metrics, earlier.length === 0),
+    aiSummary: summaryFor(score, metrics, earlier.length === 0, past),
     metrics,
     detail,
-    trendData: [...earlier, { day: "Today", score }],
+    trendData: [...earlier, { day: past?.short ?? "Today", score }],
     yesterdayScore: yesterday ?? score,
     yesterdayLabel: readinessLabel(yesterday ?? score),
+    ...(past ? { past } : {}),
   };
 }

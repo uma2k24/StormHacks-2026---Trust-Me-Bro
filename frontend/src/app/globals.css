@@ -32,7 +32,7 @@
   --accent-glow: #ffaa90;
   --marker: #ffc6b0;
 
-  /* readiness zones: Rest < 60 <= Pay Attention < 80 <= Ready */
+  /* readiness zones: Treatment Recommended < 60 <= Low Risk < 80 <= Little to No Risk */
   --zone-rest: #ff9873;
   --zone-attention: #ffc6b2;
   --zone-ready: #41cbbc;
@@ -747,7 +747,7 @@ a {
 .chip svg {
   flex: none;
 }
-/* Ready = teal, Pay Attention = soft coral, Rest = coral: the warmer, the further from ready. */
+/* Little to No Risk = teal, Low Risk = soft coral, Treatment Recommended = coral: the warmer, the higher the risk. */
 .chip-ok {
   background: var(--teal-soft);
 }
@@ -821,6 +821,33 @@ a {
 .week-days li[data-today="true"] .week-lamp {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
+}
+/* A lamp whose morning can be opened again: the lamp and its day, as one big button. */
+.week-open {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.week-open .week-lamp {
+  transition: transform 0.1s ease-out;
+}
+.week-open:active .week-lamp {
+  transform: scale(0.88);
+}
+@media (hover: hover) {
+  .week-open:hover .week-lamp {
+    transform: scale(1.08);
+  }
 }
 .week-label {
   font-weight: 700;

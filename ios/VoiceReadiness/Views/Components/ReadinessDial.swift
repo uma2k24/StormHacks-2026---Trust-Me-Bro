@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// Speedometer-style readiness gauge: Rest / Pay Attention / Ready zones,
+/// Speedometer-style readiness gauge: Treatment Recommended / Low Risk / Little to No Risk zones,
 /// a needle that swings in with a spring, and a score that counts up with it. The status settles in
 /// as the needle lands, with a light tap of the phone.
 struct ReadinessDial: View {
     let score: Int
     let statusColor: StatusColor
+    /// An earlier morning being looked at again: the title and the line below the score name that day.
+    var past: PastDay?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .largeTitle) private var numeralSize: CGFloat = 76
@@ -15,10 +17,11 @@ struct ReadinessDial: View {
     @State private var settled = false
 
     private var clamped: Int { min(max(score, 0), 100) }
-    private var indication: String { VoiceReading.parkinsonsIndication(score: clamped) }
+    private var indication: String { VoiceReading.parkinsonsIndication(score: clamped, past: past) }
+    private var whose: String { past.map { "\($0.name)'s" } ?? "Today's" }
 
     var body: some View {
-        RetroWindow(title: "Today's Readiness", index: 1) {
+        RetroWindow(title: "\(whose) Readiness", index: 1) {
             VStack(spacing: 0) {
                 GaugeView(needleScore: needleScore, hum: hum)
                     .frame(maxWidth: 300)
@@ -46,7 +49,7 @@ struct ReadinessDial: View {
             }
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Today's readiness score \(clamped) out of 100. \(statusColor.label). \(indication)")
+            .accessibilityLabel("\(whose) readiness score \(clamped) out of 100. \(statusColor.label). \(indication)")
         }
         .onAppear(perform: animateIn)
         .sensoryFeedback(.impact(weight: .light), trigger: settled) { _, landed in landed && !reduceMotion }

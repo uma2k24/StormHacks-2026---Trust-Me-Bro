@@ -4,7 +4,7 @@ import SwiftUI
 /// "Teal Desktop" palette. Mirrors the CSS tokens in frontend/src/app/globals.css.
 ///
 /// One colour theme: TEAL (calm, good, the app itself) and CORAL (the one warm accent: main
-/// actions, live states, "pay attention"). Everything else is cream paper and a very dark teal ink.
+/// actions, live states, "low risk"). Everything else is cream paper and a very dark teal ink.
 ///
 /// Contrast (WCAG): ink on paper 13.2:1, ink-soft on paper 8.3:1, white on teal-deep 7.1:1,
 /// ink on teal 7.2:1, ink on coral 6.6:1, ink on the soft tints >= 11:1.
@@ -24,7 +24,7 @@ enum AppTheme {
     static let accentGlow = Color(hex: 0xFFAA90)
     static let marker = Color(hex: 0xFFC6B0)
 
-    // Readiness zones: Rest < 60 <= Pay Attention < 80 <= Ready
+    // Readiness zones: Treatment Recommended < 60 <= Low Risk < 80 <= Little to No Risk
     static let zoneRest = Color(hex: 0xFF9873)
     static let zoneAttention = Color(hex: 0xFFC6B2)
     static let zoneReady = Color(hex: 0x41CBBC)

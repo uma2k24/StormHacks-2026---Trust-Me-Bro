@@ -58,7 +58,6 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
               placeholder="David"
               error={nameError}
               maxLength={40}
-              autoComplete="given-name"
               inputRef={nameRef}
             />
             <Field
@@ -67,7 +66,6 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
               value={draft.city}
               onChange={(city) => update({ city })}
               placeholder="Burnaby, BC"
-              autoComplete="address-level2"
             />
           </div>
         </Window>
@@ -112,7 +110,6 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
               onChange={(familyPhone) => update({ familyPhone })}
               placeholder="604 555 0134"
               maxLength={24}
-              autoComplete="tel"
             />
           </div>
         </Window>

@@ -61,9 +61,9 @@ export const mockResults: ScreeningResults = {
 };
 
 export function readinessLabel(score: number): string {
-  if (score >= 80) return "Ready";
-  if (score >= 60) return "Pay Attention";
-  return "Rest Recommended";
+  if (score >= 80) return "Little to No Risk";
+  if (score >= 60) return "Low Risk";
+  return "Treatment Recommended";
 }
 
 export function statusColorForScore(score: number): StatusColor {

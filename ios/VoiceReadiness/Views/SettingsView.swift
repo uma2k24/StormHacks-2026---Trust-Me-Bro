@@ -44,7 +44,6 @@ struct SettingsView: View {
                                 placeholder: "David",
                                 error: nameError,
                                 maxLength: 40,
-                                contentType: .givenName,
                                 focusRequest: nameFocus
                             )
                             .onChange(of: draft.name) { nameError = nil }
@@ -54,7 +53,6 @@ struct SettingsView: View {
                                 hint: "For your weather and local news",
                                 text: $draft.city,
                                 placeholder: "Burnaby, BC",
-                                contentType: .addressCity,
                                 submitLabel: .done
                             )
                         }
@@ -102,7 +100,6 @@ struct SettingsView: View {
                                 placeholder: "604 555 0134",
                                 maxLength: 24,
                                 keyboard: .phonePad,
-                                contentType: .telephoneNumber,
                                 submitLabel: .done
                             )
                         }

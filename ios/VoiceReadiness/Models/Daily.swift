@@ -50,6 +50,8 @@ enum Daily {
         /// "Monday", for VoiceOver
         let name: String
         let listened: Bool
+        /// The numbers for this morning were kept, so its lamp can be tapped to see them again.
+        let canOpen: Bool
         let today: Bool
         var id: String { day }
     }
@@ -65,9 +67,18 @@ enum Daily {
                 label: String(name.prefix(3)),
                 name: name,
                 listened: history.days[day] != nil,
+                canOpen: history.days[day]?.analysis != nil,
                 today: index == 6
             )
         }
+    }
+
+    /// "Saturday" and "Oct 3" for a day key: what a dashboard for that morning calls it.
+    static func pastDay(_ day: String) -> PastDay {
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        let weekday = date(of: day).map { Calendar.current.component(.weekday, from: $0) } ?? 1
+        let short = parts.count == 3 ? "\(monthsShort[parts[1] - 1]) \(parts[2])" : day
+        return PastDay(name: weekdays[weekday - 1], short: short)
     }
 
     /// Mornings in a row, counting back from today (or from yesterday, when today is still to come).
@@ -95,9 +106,7 @@ enum Daily {
         (1..<trendDays).reversed().compactMap { back in
             let day = shift(today, by: -back)
             guard let record = history.days[day], record.measured == true else { return nil }
-            let parts = day.split(separator: "-").compactMap { Int($0) }
-            guard parts.count == 3 else { return nil }
-            return TrendPoint(day: "\(monthsShort[parts[1] - 1]) \(parts[2])", score: record.score)
+            return TrendPoint(day: pastDay(day).short, score: record.score)
         }
     }
 
@@ -107,11 +116,28 @@ enum Daily {
         return record.score
     }
 
+    /// Made-up numbers for a demo morning: all comfortably healthy, a little different from one day to the next.
+    private static func demoAnalysis(_ step: Int) -> VoiceAnalysis {
+        let n = Double(step)
+        let probability = 0.18 + n * 0.03
+        return VoiceAnalysis(
+            probability: probability,
+            threshold: 0.6458601629247063,
+            tasks: [
+                VoiceAnalysis.Task(id: "vowel", probability: probability + 0.02, weight: 0.4, seconds: 6, windows: 1),
+                VoiceAnalysis.Task(id: "speech", probability: probability - 0.01, weight: 0.6, seconds: 32, windows: 8)
+            ],
+            measures: VoiceAnalysis.Measures(jitter: 0.45 + n * 0.04, shimmer: 5.2 + n * 0.3, hnr: 19 - n * 0.5, f0: 140 + n * 3)
+        )
+    }
+
     /// A lived-in week for demo launches, so the lamps aren't all dark: five of the six days before today.
     static func demoHistory(today: String) -> History {
         var history = History()
-        for offset in [-6, -5, -3, -2, -1] {
-            history.days[shift(today, by: offset)] = DayRecord(score: 80, done: [])
+        for (step, offset) in [-6, -5, -3, -2, -1].enumerated() {
+            let analysis = demoAnalysis(step)
+            let score = VoiceReading.readiness(probability: analysis.probability, threshold: analysis.threshold)
+            history.days[shift(today, by: offset)] = DayRecord(score: score, done: [], analysis: analysis)
         }
         return history
     }
@@ -282,6 +308,9 @@ struct DayRecord: Codable, Equatable {
     /// True when the score was worked out from their voice (it is missing on mornings saved by older
     /// versions); only measured mornings are drawn on the trend.
     var measured: Bool?
+    /// The numbers behind the score (jitter and the rest), kept so the morning can be opened again from
+    /// the week's lamps; mornings saved by older versions don't have it. A day holds only its latest check-in.
+    var analysis: VoiceAnalysis?
 }
 
 /// Which mornings they've tuned in, keyed by `Learning.dayKey()` ("2026-10-03"). Stored as JSON in
@@ -305,12 +334,19 @@ struct History: Equatable {
     }
 
     /// Today's check-in is done. Anything already ticked off today stays ticked. `measured` says the
-    /// score came from their voice: the show records the morning first (with a placeholder score) and
-    /// again once the analysis has a real one, and a placeholder never replaces a real score.
-    func recordingCheckIn(on day: String, score: Int, measured: Bool = false) -> History {
+    /// score came from their voice, and `analysis` is the numbers behind it, kept so the morning can be
+    /// looked at again. The show records the morning first (with a placeholder score) and again once the
+    /// analysis has a real one; a placeholder never replaces a real score, and a day that is checked in
+    /// twice keeps its latest measured check-in.
+    func recordingCheckIn(on day: String, score: Int, measured: Bool = false, analysis: VoiceAnalysis? = nil) -> History {
         var next = self
         if !measured, days[day] != nil { return next }
-        next.days[day] = DayRecord(score: score, done: days[day]?.done ?? [], measured: measured ? true : nil)
+        next.days[day] = DayRecord(
+            score: score,
+            done: days[day]?.done ?? [],
+            measured: measured ? true : nil,
+            analysis: analysis
+        )
         return next
     }
 

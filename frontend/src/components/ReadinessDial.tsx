@@ -5,11 +5,13 @@ import { StatusChip } from "@/components/StatusChip";
 import { Window } from "@/components/Window";
 import { readinessLabel } from "@/data/mockResults";
 import { parkinsonsIndication } from "@/data/voiceReading";
-import type { StatusColor } from "@/types/screening";
+import type { PastDay, StatusColor } from "@/types/screening";
 
 type ReadinessDialProps = {
   score: number;
   statusColor: StatusColor;
+  /** An earlier morning being looked at again: the title and the line below the score name that day. */
+  past?: PastDay;
 };
 
 const CX = 150;
@@ -18,7 +20,7 @@ const R_OUT = 132;
 const R_IN = 98;
 const NEEDLE_LEN = 124;
 
-/** Zones match the labels: Rest < 60 <= Pay Attention < 80 <= Ready. */
+/** Zones match the labels: Treatment Recommended < 60 <= Low Risk < 80 <= Little to No Risk. */
 const ZONES = [
   { from: 0, to: 60, fill: "var(--zone-rest)" },
   { from: 60, to: 80, fill: "var(--zone-attention)" },
@@ -71,18 +73,19 @@ function useCountUp(target: number, durationMs = 1500, delayMs = 350) {
   return value;
 }
 
-export function ReadinessDial({ score, statusColor }: ReadinessDialProps) {
+export function ReadinessDial({ score, statusColor, past }: ReadinessDialProps) {
   const clamped = Math.min(Math.max(score, 0), 100);
   const label = readinessLabel(clamped);
-  const indication = parkinsonsIndication(clamped);
+  const indication = parkinsonsIndication(clamped, past);
+  const whose = past ? `${past.name}'s` : "Today's";
   const shown = useCountUp(clamped);
 
   return (
-    <Window title="Today's Readiness" index={1}>
+    <Window title={`${whose} Readiness`} index={1}>
       <div
         className="flex flex-col items-center text-center"
         role="img"
-        aria-label={`Today's readiness score ${clamped} out of 100. ${label}. ${indication}`}
+        aria-label={`${whose} readiness score ${clamped} out of 100. ${label}. ${indication}`}
       >
         <svg
           className="gauge"

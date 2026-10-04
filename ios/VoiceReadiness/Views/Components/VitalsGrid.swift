@@ -4,9 +4,11 @@ struct VitalsGrid: View {
     let metrics: [Metric]
     /// Opens the numbers behind a vital. Without it the rows are plain.
     var onOpen: ((MeasureKey) -> Void)?
+    /// An earlier morning being looked at again: the title names that day.
+    var past: PastDay?
 
     var body: some View {
-        RetroWindow(title: "Today's Vitals", padded: false) {
+        RetroWindow(title: "\(past?.name ?? "Today")'s Vitals", padded: false) {
             VStack(spacing: 0) {
                 ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
                     if index > 0 {

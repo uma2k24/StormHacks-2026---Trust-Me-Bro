@@ -1,10 +1,14 @@
 import SwiftUI
 
-/// The summary in plain words, and a button that reads it aloud while each word lights up as it is
-/// said. Mirrors AiSummaryCard.tsx on the web.
+/// The summary in plain words. Starts reading aloud on its own; each word lights up as it is said.
+/// Mirrors AiSummaryCard.tsx on the web.
 struct AiSummaryCard: View {
     let summary: String
+    /// Read it aloud as soon as it shows. Off when an earlier morning is being looked at again: it waits to be asked.
+    var autoRead = true
     @State private var isPlaying = false
+    // has it been read yet, so the button says "again" only when it is
+    @State private var heard = false
     // how many words have been read so far while playing
     @State private var revealed = 0
     @State private var playback: Task<Void, Never>?
@@ -45,7 +49,7 @@ struct AiSummaryCard: View {
                     HStack(spacing: 12) {
                         Image(systemName: isPlaying ? "stop.fill" : "play.fill")
                             .font(.system(size: 22, weight: .bold))
-                        Text(isPlaying ? "Stop" : "Read it to me")
+                        Text(isPlaying ? "Stop" : (heard ? "Read it again" : "Read it to me"))
                         if isPlaying {
                             WaveformView(barCount: 5, height: 26)
                                 .foregroundStyle(AppTheme.ink)
@@ -53,18 +57,17 @@ struct AiSummaryCard: View {
                     }
                 }
                 .buttonStyle(PillButtonStyle(fill: isPlaying ? AppTheme.teal : .white))
-                .accessibilityLabel(isPlaying ? "Stop reading the summary" : "Read the summary aloud")
+                .accessibilityLabel(isPlaying ? "Stop reading the summary" : (heard ? "Read the summary aloud again" : "Read the summary aloud"))
             }
         }
-        .onDisappear { playback?.cancel() } // leaving the page stops the voice
+        .onAppear { if autoRead { startPlayback() } }
+        .onDisappear { stopPlayback() } // leaving the page stops the voice
     }
 
-    private func toggle() {
-        if isPlaying {
-            playback?.cancel()
-            return
-        }
+    private func startPlayback() {
+        playback?.cancel()
         isPlaying = true
+        heard = true
         revealed = 0
         playCount += 1
         let press = playCount
@@ -78,5 +81,19 @@ struct AiSummaryCard: View {
             isPlaying = false
             playback = nil
         }
+    }
+
+    private func stopPlayback() {
+        playback?.cancel()
+        playback = nil
+        isPlaying = false
+    }
+
+    private func toggle() {
+        if isPlaying {
+            stopPlayback()
+            return
+        }
+        startPlayback()
     }
 }

@@ -20,6 +20,8 @@ type IdleScreenProps = {
   /** Today's show has only just been heard: today's lamp lights up as home appears (once). */
   lightToday: boolean;
   onLampLit: () => void;
+  /** A lamp for an earlier morning was tapped: look at that morning's results again. */
+  onOpenDay: (day: string) => void;
   /** How many of today's little things are ticked off, out of how many. */
   listDone: number;
   listTotal: number;
@@ -32,7 +34,7 @@ type IdleScreenProps = {
 
 /**
  * Home. Before the show: Play, and what's on. Once they've listened: their day's list, and the week
- * of mornings they've tuned in. Either way the bottom row is one tap from Settings and, when they've
+ * of mornings they've tuned in (tap a lamp to see that morning's results again). Either way the bottom row is one tap from Settings and, when they've
  * added someone, from calling their family, and a little Upload button sits beside the big one for
  * checking a recording instead of talking to the radio (web only).
  */
@@ -45,6 +47,7 @@ export function IdleScreen({
   streak,
   lightToday,
   onLampLit,
+  onOpenDay,
   listDone,
   listTotal,
   onStart,
@@ -124,7 +127,7 @@ export function IdleScreen({
       )}
 
       {doneToday ? (
-        <WeekLamps week={week} streak={streak} lightToday={lightToday} onLit={onLampLit} />
+        <WeekLamps week={week} streak={streak} lightToday={lightToday} onLit={onLampLit} onOpen={onOpenDay} />
       ) : playReady ? (
         <div
           className="stat pop-in w-full text-left"

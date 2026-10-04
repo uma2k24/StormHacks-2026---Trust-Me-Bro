@@ -140,9 +140,8 @@ final class RadioVoice: NSObject, AVAudioPlayerDelegate {
         if !Task.isCancelled { onProgress?(1) }
     }
 
-    /// Reads something aloud because the listener asked (the voice summary): the radio's voice when
-    /// there is one, otherwise the device's own voice, so pressing Play is never silent. Mirrors
-    /// readAloud() in radioVoice.ts.
+    /// Reads something aloud (the voice summary): the radio's voice when there is one, otherwise the
+    /// device's own voice, so it is never silent. Mirrors readAloud() in radioVoice.ts.
     func readAloud(_ text: String, onProgress: ((Double) -> Void)? = nil) async {
         let data = await prefetch(text).value
         guard !Task.isCancelled else { return }

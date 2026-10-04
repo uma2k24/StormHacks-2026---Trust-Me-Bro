@@ -2,12 +2,14 @@
 
 import { Activity, Check, ChevronRight, TriangleAlert, Waves, Wind } from "lucide-react";
 import { Window } from "@/components/Window";
-import type { MeasureKey, Metric } from "@/types/screening";
+import type { MeasureKey, Metric, PastDay } from "@/types/screening";
 
 type VitalsGridProps = {
   metrics: Record<MeasureKey, Metric>;
   /** Opens the numbers behind a vital. Without it the rows are plain. */
   onOpen?: (key: MeasureKey) => void;
+  /** An earlier morning being looked at again: the title names that day. */
+  past?: PastDay;
 };
 
 const VITALS = [
@@ -16,9 +18,9 @@ const VITALS = [
   { key: "hnr" as const, label: "HNR", icon: Wind },
 ];
 
-export function VitalsGrid({ metrics, onOpen }: VitalsGridProps) {
+export function VitalsGrid({ metrics, onOpen, past }: VitalsGridProps) {
   return (
-    <Window title="Today's Vitals" padded={false}>
+    <Window title={`${past ? past.name : "Today"}'s Vitals`} padded={false}>
       <ul className="m-0 list-none p-0">
         {VITALS.map(({ key, label, icon: Icon }) => {
           const metric = metrics[key];

@@ -12,6 +12,7 @@ import {
   type TalkSpeed,
   type TextSize,
 } from "@/data/profile";
+import type { VoiceAnalysis, VoiceTask } from "@/types/voice";
 
 /**
  * The listener's profile, text size and talking speed live in localStorage so they stick between
@@ -138,6 +139,29 @@ function parseTodaysShow(raw: string | null): TodaysShow | null {
 
 const emptyHistory: History = {};
 
+function isVoiceTask(value: unknown): value is VoiceTask {
+  const task = value as Partial<VoiceTask> | null;
+  return (
+    (task?.id === "vowel" || task?.id === "speech") &&
+    isNumber(task.probability) &&
+    isNumber(task.weight) &&
+    isNumber(task.seconds) &&
+    isNumber(task.windows)
+  );
+}
+
+/** The numbers behind a morning's score. Anything that doesn't look right is dropped, so the morning just can't be opened. */
+function parseAnalysis(value: unknown): VoiceAnalysis | undefined {
+  const data = value as Partial<VoiceAnalysis> | null;
+  if (!data || !isNumber(data.probability) || !isNumber(data.threshold)) return undefined;
+  if (!Array.isArray(data.tasks) || !data.tasks.every(isVoiceTask)) return undefined;
+  const m = data.measures;
+  if (m === undefined || m === null) return { probability: data.probability, threshold: data.threshold, tasks: data.tasks, measures: null };
+  if (!isNumber(m.jitter) || !isNumber(m.shimmer) || !isNumber(m.hnr) || !isNumber(m.f0)) return undefined;
+  const measures = { jitter: m.jitter, shimmer: m.shimmer, hnr: m.hnr, f0: m.f0 };
+  return { probability: data.probability, threshold: data.threshold, tasks: data.tasks, measures };
+}
+
 function parseHistory(raw: string | null): History {
   if (!raw) return emptyHistory;
   try {
@@ -146,7 +170,13 @@ function parseHistory(raw: string | null): History {
     for (const [day, record] of Object.entries(data)) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !isNumber(record?.score)) continue;
       const done = Array.isArray(record.done) ? record.done.filter((id) => typeof id === "string") : [];
-      history[day] = { score: record.score, done, ...(record.measured === true ? { measured: true } : {}) };
+      const analysis = parseAnalysis(record.analysis);
+      history[day] = {
+        score: record.score,
+        done,
+        ...(record.measured === true ? { measured: true } : {}),
+        ...(analysis ? { analysis } : {}),
+      };
     }
     return history;
   } catch {
@@ -262,14 +292,19 @@ function saveHistory(history: History) {
 
 /**
  * Today's check-in is done. Anything already ticked off today stays ticked. `measured` says the
- * score came from their voice: the show records the morning first (with a placeholder score) and
- * again once the analysis has a real one, and a placeholder never replaces a real score.
+ * score came from their voice, and `analysis` is the numbers behind it, kept so the morning can be
+ * looked at again. The show records the morning first (with a placeholder score) and again once the
+ * analysis has a real one; a placeholder never replaces a real score, and a day that is checked in
+ * twice keeps its latest measured check-in.
  */
-export function recordCheckIn(day: string, score: number, measured = false) {
+export function recordCheckIn(day: string, score: number, measured = false, analysis?: VoiceAnalysis) {
   const history = historyStore.getSnapshot();
   const existing = history[day];
   const done = existing?.done ?? [];
-  const record: DayRecord = !measured && existing ? existing : { score, done, ...(measured ? { measured } : {}) };
+  const record: DayRecord =
+    !measured && existing
+      ? existing
+      : { score, done, ...(measured ? { measured } : {}), ...(analysis ? { analysis } : {}) };
   saveHistory({ ...history, [day]: { ...record, done } });
 }
 

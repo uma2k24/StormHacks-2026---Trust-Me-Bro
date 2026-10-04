@@ -10,10 +10,12 @@ import {
   YAxis,
 } from "recharts";
 import { Window } from "@/components/Window";
-import type { TrendPoint } from "@/types/screening";
+import type { PastDay, TrendPoint } from "@/types/screening";
 
 type TrendChartProps = {
   data: TrendPoint[];
+  /** An earlier morning being looked at again: the chart ends on that day rather than today. */
+  past?: PastDay;
 };
 
 const INK = "#0F2E33";
@@ -29,10 +31,12 @@ function remPx(): number {
   return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
-export function TrendChart({ data }: TrendChartProps) {
+export function TrendChart({ data, past }: TrendChartProps) {
   const last = data.length - 1;
   const first = data[0];
   const today = data[last];
+  // how the last dot is spoken of: "today", or the weekday it was
+  const lastWord = past ? past.name : "today";
   // the first point says how far back the chart goes: "Oct 1", or "2 weeks ago" for a full fortnight
   const startLabel = first.day;
   const axisFontPx = AXIS_FONT_REM * remPx();
@@ -113,7 +117,9 @@ export function TrendChart({ data }: TrendChartProps) {
     <Window title="Readiness Over 14 Days">
       <p className="m-0 text-[1.15rem] text-[var(--ink-soft)]">
         {last === 0
-          ? "This is your first reading. Every morning adds another dot."
+          ? past
+            ? "That was your first reading."
+            : "This is your first reading. Every morning adds another dot."
           : "A simple look at how your score has been trending."}
       </p>
 
@@ -122,8 +128,8 @@ export function TrendChart({ data }: TrendChartProps) {
         role="img"
         aria-label={
           last === 0
-            ? `Line chart of your readiness. Today is ${today.score}, your first reading.`
-            : `Line chart of your readiness since ${startLabel}. It started at ${first.score} and today is ${today.score}.`
+            ? `Line chart of your readiness. ${past ? past.name : "Today"} is ${today.score}, your first reading.`
+            : `Line chart of your readiness since ${startLabel}. It started at ${first.score} and ${lastWord} is ${today.score}.`
         }
       >
         <ResponsiveContainer width="100%" height="100%">

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Morning Radio">
+  <!-- cream paper tile -->
+  <rect width="32" height="32" rx="8" fill="#FBF5E6"/>
+  <!-- antenna -->
+  <path d="M12 8.5V4.5" stroke="#0F2E33" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="12" cy="3.5" r="1.6" fill="#FF9873"/>
+  <!-- radio body: deep teal, thick ink outline -->
+  <rect x="4.5" y="8.5" width="23" height="17" rx="4" fill="#0A6360" stroke="#0F2E33" stroke-width="1.75"/>
+  <!-- speaker grille in bright teal -->
+  <circle cx="11" cy="17" r="1.35" fill="#41CBBC"/>
+  <circle cx="15.5" cy="17" r="1.35" fill="#41CBBC"/>
+  <circle cx="20" cy="17" r="1.35" fill="#41CBBC"/>
+  <!-- coral dial -->
+  <circle cx="24" cy="13.5" r="2.4" fill="#FF9873" stroke="#0F2E33" stroke-width="1.25"/>
+</svg>

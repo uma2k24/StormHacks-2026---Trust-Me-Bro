@@ -17,6 +17,8 @@ struct ContentView: View {
     // This morning's voice analysis: in flight while the Processing screen shows, then its answer.
     @State private var work: Task<Void, Never>?
     @State private var analysis: VoiceAnalysis?
+    // A lamp from the week that has been tapped: that morning's results are showing instead of today's.
+    @State private var reviewDay: String?
     // The day this screen opened on: an app left running overnight keeps the show it has.
     @State private var today = Learning.dayKey()
     // Today's first check-in has just happened: today's lamp lights up the next time home is shown.
@@ -88,6 +90,18 @@ struct ContentView: View {
         )
     }
 
+    /// An earlier morning looked at again, worked out from the numbers kept with it.
+    private func results(on day: String) -> ScreeningResults? {
+        guard let kept = history.days[day]?.analysis else { return nil }
+        return VoiceReading.results(
+            user: profile?.name ?? "",
+            analysis: kept,
+            earlier: Daily.trendBefore(history, today: day),
+            yesterday: Daily.yesterdayScore(history, today: day),
+            past: Daily.pastDay(day)
+        )
+    }
+
     /// Today's little things, from the results, this morning's weather segment and their own reminder.
     private var todaysList: [Daily.TodayItem] {
         Daily.plan(
@@ -131,6 +145,10 @@ struct ContentView: View {
                             streak: Daily.streak(history, today: today),
                             lightToday: lightLamp,
                             onLampLit: { lightLamp = false },
+                            onOpenDay: { day in
+                                reviewDay = day
+                                navigated = .results
+                            },
                             listDone: todaysList.filter { ticked.contains($0.id) }.count,
                             listTotal: todaysList.count,
                             onStart: {
@@ -161,7 +179,18 @@ struct ContentView: View {
                     case .processing:
                         ProcessingView(work: work, onComplete: { navigated = .results })
                     case .results:
-                        ResultsView(results: results, onFinish: { navigated = .today })
+                        if let day = reviewDay, let earlier = results(on: day) {
+                            ResultsView(
+                                results: earlier,
+                                onFinish: {
+                                    reviewDay = nil
+                                    navigated = .idle
+                                }
+                            )
+                            .id(day)
+                        } else {
+                            ResultsView(results: results, onFinish: { navigated = .today })
+                        }
                     case .today:
                         TodayView(
                             profile: profile ?? .demo,
@@ -238,7 +267,8 @@ struct ContentView: View {
             guard case .done(let result) = await VoiceService.analyse(captured) else { return }
             analysis = result
             let score = VoiceReading.readiness(probability: result.probability, threshold: result.threshold)
-            historyJSON = History(json: historyJSON).recordingCheckIn(on: day, score: score, measured: true).json
+            historyJSON = History(json: historyJSON)
+                .recordingCheckIn(on: day, score: score, measured: true, analysis: result).json
         }
         navigated = .processing
     }

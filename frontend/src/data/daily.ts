@@ -8,7 +8,9 @@
 
 import { dayKey } from "@/data/learning";
 import type { Profile } from "@/data/profile";
-import type { Metric, StatusColor, TrendPoint } from "@/types/screening";
+import { readinessFrom } from "@/data/voiceReading";
+import type { Metric, PastDay, StatusColor, TrendPoint } from "@/types/screening";
+import type { VoiceAnalysis } from "@/types/voice";
 
 // ---- the time of day ----------------------------------------------------------------------------
 
@@ -35,9 +37,11 @@ export function dateParts(date: Date = new Date()): { weekday: string; date: str
 /**
  * One morning's check-in: the readiness score and which of the day's little things are ticked off.
  * `measured` is true when the score was worked out from their voice (it can be missing on mornings
- * saved by older versions); only measured mornings are drawn on the trend.
+ * saved by older versions); only measured mornings are drawn on the trend. `analysis` is the numbers
+ * behind the score (jitter and the rest), kept so the morning can be opened again from the week's
+ * lamps; mornings saved by older versions don't have it. A day holds only its latest check-in.
  */
-export type DayRecord = { score: number; done: string[]; measured?: boolean };
+export type DayRecord = { score: number; done: string[]; measured?: boolean; analysis?: VoiceAnalysis };
 
 /** Keyed by dayKey() ("2026-10-03"). */
 export type History = Record<string, DayRecord>;
@@ -57,6 +61,8 @@ export type WeekDay = {
   /** "Monday", for screen readers */
   name: string;
   listened: boolean;
+  /** The numbers for this morning were kept, so its lamp can be tapped to see them again. */
+  canOpen: boolean;
   today: boolean;
 };
 
@@ -66,8 +72,24 @@ export function lastSevenDays(history: History, today: string): WeekDay[] {
     const day = shiftDay(today, index - 6);
     const [year, month, date] = day.split("-").map(Number);
     const name = WEEKDAYS[new Date(year, month - 1, date).getDay()];
-    return { day, label: name.slice(0, 3), name, listened: Boolean(history[day]), today: index === 6 };
+    return {
+      day,
+      label: name.slice(0, 3),
+      name,
+      listened: Boolean(history[day]),
+      canOpen: Boolean(history[day]?.analysis),
+      today: index === 6,
+    };
   });
+}
+
+/** "Saturday" and "Oct 3" for a day key: what a dashboard for that morning calls it. */
+export function pastDay(day: string): PastDay {
+  const [year, month, date] = day.split("-").map(Number);
+  return {
+    name: WEEKDAYS[new Date(year, month - 1, date).getDay()],
+    short: `${MONTHS_SHORT[month - 1]} ${date}`,
+  };
 }
 
 /** Mornings in a row, counting back from today (or from yesterday, when today is still to come). */
@@ -97,8 +119,7 @@ export function trendBefore(history: History, today: string): TrendPoint[] {
     const day = shiftDay(today, -back);
     const record = history[day];
     if (!record?.measured) continue;
-    const [, month, date] = day.split("-").map(Number);
-    points.push({ day: `${MONTHS_SHORT[month - 1]} ${date}`, score: record.score });
+    points.push({ day: pastDay(day).short, score: record.score });
   }
   return points;
 }
@@ -109,11 +130,26 @@ export function yesterdayScore(history: History, today: string): number | undefi
   return record?.measured ? record.score : undefined;
 }
 
+/** Made-up numbers for a demo morning: all comfortably healthy, a little different from one day to the next. */
+function demoAnalysis(step: number): VoiceAnalysis {
+  const probability = 0.18 + step * 0.03;
+  return {
+    probability,
+    threshold: 0.6458601629247063,
+    tasks: [
+      { id: "vowel", probability: probability + 0.02, weight: 0.4, seconds: 6, windows: 1 },
+      { id: "speech", probability: probability - 0.01, weight: 0.6, seconds: 32, windows: 8 },
+    ],
+    measures: { jitter: 0.45 + step * 0.04, shimmer: 5.2 + step * 0.3, hnr: 19 - step * 0.5, f0: 140 + step * 3 },
+  };
+}
+
 /** A lived-in week for demo links, so the lamps aren't all dark: five of the six days before today. */
 export function demoHistory(today: string): History {
   const history: History = {};
-  [-6, -5, -3, -2, -1].forEach((offset) => {
-    history[shiftDay(today, offset)] = { score: 80, done: [] };
+  [-6, -5, -3, -2, -1].forEach((offset, step) => {
+    const analysis = demoAnalysis(step);
+    history[shiftDay(today, offset)] = { score: readinessFrom(analysis.probability, analysis.threshold), done: [], analysis };
   });
   return history;
 }
