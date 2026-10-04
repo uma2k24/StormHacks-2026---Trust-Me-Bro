@@ -1,8 +1,10 @@
 import {
+  AudioLines,
   BookOpen,
   ChefHat,
   CloudSun,
   Landmark,
+  MessageCircle,
   MapPin,
   Music,
   Newspaper,
@@ -24,6 +26,8 @@ const ICONS = {
   nature: PawPrint,
   history: Landmark,
   arts: BookOpen,
+  chat: MessageCircle,
+  vowel: AudioLines,
 } satisfies Record<SegmentKind, unknown>;
 
 /** The little picture for a briefing segment. Mirrors SegmentKind.systemImage on iOS. */

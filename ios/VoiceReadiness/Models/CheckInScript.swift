@@ -5,13 +5,19 @@ import Foundation
 /// opinion. Their answers are the conversational audio the screening needs.
 ///
 /// Live segments come from the web backend's /api/briefing (Gemini + Google Search) and are read
-/// aloud by ElevenLabs via /api/briefing/speech (see BriefingService). Without a backend the mock
-/// show below plays, shaped by the listener's profile. Mirrors frontend/src/data/checkInScript.ts.
+/// aloud by ElevenLabs via /api/briefing/speech (see BriefingService). Which two interests the show
+/// covers is decided on the device from what the listener has responded to (Learning.swift), so
+/// Gemini only writes the words. Without a backend the mock show below plays, shaped by the
+/// listener's profile. Mirrors frontend/src/data/checkInScript.ts.
 
-/// "weather" and "news" are always available; the rest match the listener's `Interest`s.
+/// "weather" and "news" are always available; the rest match the listener's `Interest`s. `chat` is an
+/// extra question asked when there hasn't been enough talking yet, and `vowel` is the last question of
+/// every show: the sustained "ahhh". Neither is part of the briefing, and neither is sent to Gemini.
 enum SegmentKind: String, Codable {
     case weather
     case news
+    case chat
+    case vowel
     case sports
     case local
     case garden
@@ -31,6 +37,8 @@ enum SegmentKind: String, Codable {
         switch self {
         case .weather: return "cloud.sun.fill"
         case .news: return "newspaper.fill"
+        case .chat: return "bubble.left.fill"
+        case .vowel: return "waveform"
         case .sports: return "trophy.fill"
         case .local: return "mappin.and.ellipse"
         case .garden: return "leaf.fill"
@@ -52,7 +60,7 @@ struct BriefingSegment: Identifiable, Codable {
     let brief: String
     /// The open question that invites a real answer.
     let question: String
-    /// What the mock microphone "hears" (the mic is still simulated).
+    /// The sample answer played when there is no microphone or transcription to hear a real one.
     let mockReply: String
 }
 
@@ -74,6 +82,154 @@ enum CheckInScript {
     /// Without a voice, a brief stays up about as long as reading it aloud.
     static let readPerWord: Duration = .milliseconds(330)
     static let minRead: Duration = .milliseconds(2200)
+
+    // Real answers (see AnswerRecorder). Mirrors the constants in frontend/src/data/checkInScript.ts.
+    /// Louder than this (in dBFS) counts as talking.
+    static let speechDB: Float = -40
+    /// This long without talking, after they have talked, sends the answer.
+    static let silenceEnd: TimeInterval = 2.2
+    /// This long without ever talking sends it anyway: nothing was heard.
+    static let noSpeech: TimeInterval = 15
+    /// The longest one answer can be.
+    static let maxAnswer: TimeInterval = 45
+    /// A breath after the radio's reply before the next segment.
+    static let afterReplyPause: Duration = .milliseconds(600)
+    /// After the radio stops talking the microphone opens this much later, so it doesn't hear itself.
+    static let handsFreeGap: Duration = .milliseconds(400)
+
+    // Enough voice for the classifier (see frontend/src/lib/voice/analysis.ts). Mirrors the constants in
+    // frontend/src/data/checkInScript.ts. The classifier listens four seconds at a time, so that it has a
+    // couple of windows to go on the show keeps asking questions until about this much talking has been
+    // heard, and always ends with the sustained "ahhh", which jitter, shimmer and HNR are measured on.
+    /// Talking across the show, pauses not counted (a little over two windows' worth: the count is generous).
+    static let minSpeech: TimeInterval = 9
+    /// Extra questions asked at most, so a quiet listener isn't kept for ever.
+    static let maxExtraQuestions = 4
+    /// The "ahhh" stops by itself once it has been held this long.
+    static let vowelTarget: TimeInterval = 8
+    /// A shorter "ahhh" than this is asked for once more.
+    static let vowelMin: TimeInterval = 4
+    static let vowelTries = 2
+
+    static let vowelListeningLine = "Say “ahhh”…"
+    static let vowelAgainLine = "Let's try that once more. Take a deep breath and say “ahhh” for as long as you comfortably can."
+    private static let vowelSignOffLine = "Lovely, thank you, {name}. That's the show for today. Have a lovely day."
+
+    private struct ExtraLine {
+        let brief: String
+        let question: String
+        let mockReply: String
+    }
+
+    /// Plain questions that get people talking, asked in this order when more speech is needed. {name} is the listener.
+    private static let extraLines = [
+        ExtraLine(
+            brief: "I'm enjoying our chat, {name}. Let's keep going a little longer.",
+            question: "What are you looking forward to this week?",
+            mockReply: "A visit with my grandchildren on Sunday. They always bring a puzzle."
+        ),
+        ExtraLine(
+            brief: "Here's something I'm curious about.",
+            question: "Tell me about a place you've loved visiting, and what made it special.",
+            mockReply: "A little town by the sea, where we spent every summer when the children were small."
+        ),
+        ExtraLine(
+            brief: "Let's go back in time for a moment.",
+            question: "What was your first job, and what do you remember about it?",
+            mockReply: "I worked in a bakery. I still remember the smell of the bread at five in the morning."
+        ),
+        ExtraLine(
+            brief: "One more, if you don't mind.",
+            question: "What's a meal you could happily eat again and again?",
+            mockReply: "My mother's chicken and dumplings. Nobody has ever made them quite the same."
+        )
+    ]
+
+    private static func displayName(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? "friend" : trimmed
+    }
+
+    /// The nth extra question (0-based), or nil once they have all been asked. Mirrors extraTurn() on the web.
+    static func extraTurn(_ index: Int, for name: String) -> BriefingSegment? {
+        guard extraLines.indices.contains(index) else { return nil }
+        let line = extraLines[index]
+        return BriefingSegment(
+            id: "chat-\(index)",
+            kind: .chat,
+            topic: "Chat",
+            brief: line.brief.replacingOccurrences(of: "{name}", with: displayName(name)),
+            question: line.question,
+            mockReply: line.mockReply
+        )
+    }
+
+    /// The last question of every show. Mirrors vowelTurn() on the web.
+    static func vowelTurn(for name: String) -> BriefingSegment {
+        BriefingSegment(
+            id: "vowel",
+            kind: .vowel,
+            topic: "Your voice",
+            brief: "One last thing, \(displayName(name)).",
+            question: "Take a deep breath, then say “ahhh” and hold it steady for about eight seconds.",
+            mockReply: "Ahhhhhh."
+        )
+    }
+
+    /// What the radio says once the "ahhh" is done. Mirrors vowelSignOff() on the web.
+    static func vowelSignOff(for name: String) -> String {
+        vowelSignOffLine.replacingOccurrences(of: "{name}", with: displayName(name))
+    }
+
+    /// The radio's own lines for when the conversation can't go to plan. It carries on by itself after each.
+    static let missedLine = "Sorry, I didn't catch that. Could you say it again?"
+    static let giveUpLine = "That's all right. Let's move on."
+    static let micBlockedLine = "The microphone is blocked, so I'll use a sample answer."
+    static let micMissingLine = "I can't find a microphone, so I'll use a sample answer."
+    static let thinkingLine = "Just a moment…"
+
+    private static let thanks = [
+        "Thank you for telling me that, {name}. I always enjoy hearing from you.",
+        "That sounds lovely, {name}. Thanks for sharing it with me.",
+        "I like hearing that, {name}. Thank you for chatting."
+    ]
+    private static let signOff = "Thank you for sharing that, {name}. That's the show for today. Have a lovely day."
+
+    /// What the radio says back when Gemini can't write a reply (no key, offline, an error): a warm,
+    /// fixed line that never claims to know anything. The last segment signs off the show.
+    /// Mirrors fallbackReply() on the web.
+    static func fallbackReply(for name: String, segmentIndex: Int, last: Bool) -> String {
+        let line = last ? signOff : thanks[segmentIndex % thanks.count]
+        let who = name.trimmingCharacters(in: .whitespaces)
+        return line.replacingOccurrences(of: "{name}", with: who.isEmpty ? "friend" : who)
+    }
+
+    /// How many words of a line have been spoken once `fraction` (0...1) of its audio has played, so
+    /// the words can appear on screen as the voice reaches them. Longer words and the pause after a
+    /// comma or a full stop take longer to say, so they take more of the line. A word shows a touch
+    /// before it is heard: the text is never behind the voice. Mirrors wordsSpoken() on the web.
+    static func wordsSpoken(in text: String, fraction: Double) -> Int {
+        let words = text.split(whereSeparator: \.isWhitespace)
+        if fraction >= 1 { return words.count }
+
+        func pause(after word: Substring) -> Double {
+            guard let last = word.last else { return 0 }
+            if ".!?…".contains(last) { return 6 }
+            if ",;:—".contains(last) { return 3 }
+            return 0
+        }
+        let weights = words.map { Double(max(2, $0.count)) + pause(after: $0) }
+        let total = weights.reduce(0, +)
+
+        var before = 0.0
+        var count = 0
+        for weight in weights {
+            if before / total > fraction + 0.015 { break }
+            count += 1
+            before += weight
+        }
+        return count
+    }
 
     /// How long to leave text on screen when there is no audio to wait for.
     static func readingTime(_ text: String) -> Duration {
@@ -140,15 +296,23 @@ enum CheckInScript {
     ]
 
     /// When someone picks fewer than two interests, the show fills up with these.
-    private static let mockFillers: [Interest] = [.local, .history, .nature]
+    private static let fillerInterests: [Interest] = [.local, .history, .nature]
 
-    /// The mock show: the weather, then two segments from the listener's interests (their first
-    /// two picks, topped up from `mockFillers`). Mirrors mockBriefingFor() on the web.
-    static func mockBriefing(for profile: Profile) -> Briefing {
+    /// The two interests for a show nobody has chosen picks for (see `Learning.chooseInterests`
+    /// for how they are normally chosen): their first two, topped up from `fillerInterests`.
+    /// Mirrors fallbackPicks() on the web.
+    static func fallbackPicks(for profile: Profile) -> [Interest] {
         var picks = Array(profile.interests.prefix(2))
-        for filler in mockFillers where picks.count < 2 && !picks.contains(filler) {
+        for filler in fillerInterests where picks.count < 2 && !picks.contains(filler) {
             picks.append(filler)
         }
+        return picks
+    }
+
+    /// The mock show: the weather, then a segment for each of the two picks (the fallback two when
+    /// none are given). Mirrors mockBriefingFor() on the web.
+    static func mockBriefing(for profile: Profile, picks: [Interest]? = nil) -> Briefing {
+        let picks = picks ?? fallbackPicks(for: profile)
 
         let name = profile.name.isEmpty ? "friend" : profile.name
         let town = profile.city.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""

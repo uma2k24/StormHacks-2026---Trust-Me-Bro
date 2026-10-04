@@ -3,17 +3,21 @@ import { type DayRecord, type History, HISTORY_DAYS } from "@/data/daily";
 import { emptyLearned, type Learned, type Taste, type TodaysShow } from "@/data/learning";
 import {
   DEFAULT_TEXT_SIZE,
+  DEFAULT_TALK_SPEED,
   isInterestId,
   isShowTime,
+  isTalkSpeed,
   isTextSize,
   type Profile,
+  type TalkSpeed,
   type TextSize,
 } from "@/data/profile";
 
 /**
- * The listener's profile and text size live in localStorage so they stick between visits, along
- * with what the radio has learned about them, today's show, and which mornings they have tuned in.
- * All are read through useSyncExternalStore so the server and the first client render always agree.
+ * The listener's profile, text size and talking speed live in localStorage so they stick between
+ * visits, along with what the radio has learned about them, today's show, and which mornings they
+ * have tuned in. All are read through useSyncExternalStore so the server and the first client
+ * render always agree.
  */
 
 function createStore<T>(key: string, parse: (raw: string | null) => T) {
@@ -138,7 +142,7 @@ function parseHistory(raw: string | null): History {
     for (const [day, record] of Object.entries(data)) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !isNumber(record?.score)) continue;
       const done = Array.isArray(record.done) ? record.done.filter((id) => typeof id === "string") : [];
-      history[day] = { score: record.score, done };
+      history[day] = { score: record.score, done, ...(record.measured === true ? { measured: true } : {}) };
     }
     return history;
   } catch {
@@ -149,6 +153,9 @@ function parseHistory(raw: string | null): History {
 const profileStore = createStore("voice-readiness:profile", parseProfile);
 const textSizeStore = createStore<TextSize>("voice-readiness:text-size", (raw) =>
   isTextSize(raw) ? raw : DEFAULT_TEXT_SIZE,
+);
+const talkSpeedStore = createStore<TalkSpeed>("voice-readiness:talk-speed", (raw) =>
+  isTalkSpeed(raw) ? raw : DEFAULT_TALK_SPEED,
 );
 const learnedStore = createStore("voice-readiness:learned", parseLearned);
 const showStore = createStore("voice-readiness:today", parseTodaysShow);
@@ -173,6 +180,23 @@ export function useTextSize(): TextSize {
 
 export function saveTextSize(size: TextSize) {
   textSizeStore.write(size);
+}
+
+export function useTalkSpeed(): TalkSpeed {
+  return useSyncExternalStore(
+    talkSpeedStore.subscribe,
+    talkSpeedStore.getSnapshot,
+    () => DEFAULT_TALK_SPEED,
+  );
+}
+
+/** Non-hook read for the radio voice (speak runs outside React). */
+export function getTalkSpeed(): TalkSpeed {
+  return talkSpeedStore.getSnapshot();
+}
+
+export function saveTalkSpeed(speed: TalkSpeed) {
+  talkSpeedStore.write(speed);
 }
 
 /** What the radio has learned about this listener (see data/learning.ts). */
@@ -216,10 +240,17 @@ function saveHistory(history: History) {
   historyStore.write(JSON.stringify(Object.fromEntries(days.map((day) => [day, history[day]]))));
 }
 
-/** Today's check-in is done. Anything already ticked off today stays ticked. */
-export function recordCheckIn(day: string, score: number) {
+/**
+ * Today's check-in is done. Anything already ticked off today stays ticked. `measured` says the
+ * score came from their voice: the show records the morning first (with a placeholder score) and
+ * again once the analysis has a real one, and a placeholder never replaces a real score.
+ */
+export function recordCheckIn(day: string, score: number, measured = false) {
   const history = historyStore.getSnapshot();
-  saveHistory({ ...history, [day]: { score, done: history[day]?.done ?? [] } });
+  const existing = history[day];
+  const done = existing?.done ?? [];
+  const record: DayRecord = !measured && existing ? existing : { score, done, ...(measured ? { measured } : {}) };
+  saveHistory({ ...history, [day]: { ...record, done } });
 }
 
 /** Ticks one of the day's little things off, or back on. */

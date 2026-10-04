@@ -7,14 +7,20 @@ struct TrendChartView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var reveal: CGFloat = 0
 
+    /// Only the two ends are labelled (the title says 14 days). Mirrors TrendChart.tsx.
+    /// The first point says how far back the chart goes: "Oct 1", or "2 weeks ago" for a full fortnight.
+    private var startLabel: String { data.first?.day ?? "" }
+
     private var xTicks: [String] {
-        [data.first?.day ?? "", "7", "Thu", data.last?.day ?? ""]
+        [data.first?.day, data.last?.day].compactMap { $0 }
     }
 
     var body: some View {
         RetroWindow(title: "Readiness Over 14 Days") {
             VStack(alignment: .leading, spacing: 20) {
-                Text("A simple look at how your score has been trending.")
+                Text(data.count == 1
+                    ? "This is your first reading. Every morning adds another dot."
+                    : "A simple look at how your score has been trending.")
                     .font(AppFont.body(18))
                     .foregroundStyle(AppTheme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -29,7 +35,9 @@ struct TrendChartView: View {
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(
-                        "Line chart of your readiness over 14 days. It started at \(data.first?.score ?? 0) and today is \(data.last?.score ?? 0)."
+                        data.count == 1
+                            ? "Line chart of your readiness. Today is \(data.last?.score ?? 0), your first reading."
+                            : "Line chart of your readiness since \(startLabel). It started at \(data.first?.score ?? 0) and today is \(data.last?.score ?? 0)."
                     )
             }
         }
@@ -72,25 +80,32 @@ struct TrendChartView: View {
                         .overlay { Circle().stroke(AppTheme.ink, lineWidth: isToday ? 3.5 : 2.5) }
                         .frame(width: isToday ? 20 : 11, height: isToday ? 20 : 11)
                 }
-                .annotation(
-                    position: .bottom,
-                    spacing: 6,
-                    overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
-                ) {
-                    if index == data.count - 1 {
-                        Text("\(point.score)")
-                            .font(AppFont.fixedHead(21))
-                            .foregroundStyle(AppTheme.ink)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.white))
-                            .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 2.5) }
-                    }
-                }
             }
         }
         .chartYScale(domain: 50...100)
-        .chartXScale(range: .plotDimension(padding: 14))
+        // a little room on the left for the first dot, and on the right so the "68" callout
+        // fits under the last dot
+        .chartXScale(range: .plotDimension(startPadding: 14, endPadding: 34))
+        // Callout pill under today's dot. It is placed from the dot's position because
+        // Charts' own annotation placement pushed it sideways onto the line.
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                if let today = data.last,
+                   let plot = proxy.plotFrame,
+                   let x = proxy.position(forX: today.day),
+                   let y = proxy.position(forY: today.score) {
+                    let origin = geometry[plot].origin
+                    Text("\(today.score)")
+                        .font(AppFont.fixedHead(21))
+                        .foregroundStyle(AppTheme.ink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.white))
+                        .overlay { Capsule().stroke(AppTheme.ink, lineWidth: 2.5) }
+                        .position(x: origin.x + x, y: origin.y + y + 34)
+                }
+            }
+        }
         .chartPlotStyle { plot in
             // ink axes along the left and bottom edges
             plot
@@ -107,9 +122,13 @@ struct TrendChartView: View {
         .chartXAxis {
             AxisMarks { value in
                 if let day = value.as(String.self), xTicks.contains(day) {
-                    AxisValueLabel()
-                        .font(AppFont.fixedHead(17))
-                        .foregroundStyle(AppTheme.ink)
+                    // each label is tucked inside the plot so it can't run off an edge
+                    let isStart = day == data.first?.day && data.count > 1
+                    AxisValueLabel(anchor: isStart ? .topLeading : .topTrailing) {
+                        Text(isStart ? startLabel : day)
+                            .font(AppFont.fixedHead(17))
+                            .foregroundStyle(AppTheme.ink)
+                    }
                 }
             }
         }

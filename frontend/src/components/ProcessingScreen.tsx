@@ -15,24 +15,37 @@ const TOTAL_MS = 4800;
 const TICK_MS = TOTAL_MS / BLOCKS;
 
 type ProcessingScreenProps = {
+  /** The voice analysis. The loader fills most of the way by itself, then waits here until it is done. */
+  work: Promise<unknown> | null;
   onComplete: () => void;
 };
 
-export function ProcessingScreen({ onComplete }: ProcessingScreenProps) {
+export function ProcessingScreen({ work, onComplete }: ProcessingScreenProps) {
   const [filled, setFilled] = useState(0);
+  const [finished, setFinished] = useState(work === null);
+
+  useEffect(() => {
+    if (!work) return;
+    let current = true;
+    work.catch(() => {}).finally(() => current && setFinished(true));
+    return () => {
+      current = false;
+    };
+  }, [work]);
 
   useEffect(() => {
     const tick = window.setInterval(() => {
-      setFilled((current) => Math.min(current + 1, BLOCKS));
-    }, TICK_MS);
+      // two blocks short of the end until the analysis is in, then the rest fill quickly
+      setFilled((current) => Math.min(current + 1, finished ? BLOCKS : BLOCKS - 2));
+    }, finished ? TICK_MS / 3 : TICK_MS);
+    return () => window.clearInterval(tick);
+  }, [finished]);
 
-    const finishTimer = window.setTimeout(onComplete, TOTAL_MS + 300);
-
-    return () => {
-      window.clearInterval(tick);
-      window.clearTimeout(finishTimer);
-    };
-  }, [onComplete]);
+  useEffect(() => {
+    if (!finished || filled < BLOCKS) return;
+    const finishTimer = window.setTimeout(onComplete, 300);
+    return () => window.clearTimeout(finishTimer);
+  }, [finished, filled, onComplete]);
 
   const messageIndex = Math.min(
     Math.floor((filled / BLOCKS) * MESSAGES.length),

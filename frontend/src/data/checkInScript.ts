@@ -12,8 +12,12 @@
 
 import type { InterestId, Profile } from "@/data/profile";
 
-/** "weather" and "news" are always available; every interest is also a kind. */
-export type SegmentKind = "weather" | "news" | InterestId;
+/**
+ * "weather" and "news" are always available; every interest is also a kind. "chat" is an extra
+ * question asked when there hasn't been enough talking yet, and "vowel" is the last question of every
+ * show: the sustained "ahhh". Neither is part of the briefing, and neither is sent to Gemini.
+ */
+export type SegmentKind = "weather" | "news" | "chat" | "vowel" | InterestId;
 
 export type BriefingSegment = {
   id: string;
@@ -128,6 +132,81 @@ export function mockBriefingFor(
       ...picks.map((id): BriefingSegment => ({ id, kind: id, ...MOCK_LINES[id] })),
     ],
   };
+}
+
+// ---- enough voice for the classifier -------------------------------------------------------------
+
+// The classifier listens to four seconds at a time (see lib/voice/analysis.ts). So that it has a
+// couple of windows to go on, the show keeps asking questions until about this much talking has been
+// heard, and always ends with the sustained "ahhh", which the jitter / shimmer / HNR are measured on.
+// Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.
+export const MIN_SPEECH_MS = 9000; // talking across the show, pauses not counted (a little over two windows' worth: the count is generous)
+export const MAX_EXTRA_QUESTIONS = 4; // asked at most, so a quiet listener isn't kept for ever
+export const VOWEL_TARGET_MS = 8000; // the "ahhh" stops by itself once it has been held this long
+export const VOWEL_MIN_MS = 4000; // a shorter "ahhh" than this is asked for once more
+export const VOWEL_TRIES = 2;
+
+type ExtraLine = Pick<BriefingSegment, "brief" | "question" | "mockReply">;
+
+/** Plain questions that get people talking, asked in this order when more speech is needed. {name} is the listener. */
+const EXTRA_LINES: ExtraLine[] = [
+  {
+    brief: "I'm enjoying our chat, {name}. Let's keep going a little longer.",
+    question: "What are you looking forward to this week?",
+    mockReply: "A visit with my grandchildren on Sunday. They always bring a puzzle.",
+  },
+  {
+    brief: "Here's something I'm curious about.",
+    question: "Tell me about a place you've loved visiting, and what made it special.",
+    mockReply: "A little town by the sea, where we spent every summer when the children were small.",
+  },
+  {
+    brief: "Let's go back in time for a moment.",
+    question: "What was your first job, and what do you remember about it?",
+    mockReply: "I worked in a bakery. I still remember the smell of the bread at five in the morning.",
+  },
+  {
+    brief: "One more, if you don't mind.",
+    question: "What's a meal you could happily eat again and again?",
+    mockReply: "My mother's chicken and dumplings. Nobody has ever made them quite the same.",
+  },
+];
+
+const nameOf = (name: string) => name.trim() || "friend";
+
+/** The nth extra question (0-based), or null once they have all been asked. Mirrored in CheckInScript.extraTurn(_:for:). */
+export function extraTurn(index: number, name: string): BriefingSegment | null {
+  const line = EXTRA_LINES[index];
+  if (!line) return null;
+  return {
+    id: `chat-${index}`,
+    kind: "chat",
+    topic: "Chat",
+    brief: line.brief.replace("{name}", nameOf(name)),
+    question: line.question,
+    mockReply: line.mockReply,
+  };
+}
+
+/** The last question of every show. Mirrored in CheckInScript.vowelTurn(for:). */
+export function vowelTurn(name: string): BriefingSegment {
+  return {
+    id: "vowel",
+    kind: "vowel",
+    topic: "Your voice",
+    brief: `One last thing, ${nameOf(name)}.`,
+    question: "Take a deep breath, then say “ahhh” and hold it steady for about eight seconds.",
+    mockReply: "Ahhhhhh.",
+  };
+}
+
+export const VOWEL_LISTENING_LINE = "Say “ahhh”…";
+export const VOWEL_AGAIN_LINE = "Let's try that once more. Take a deep breath and say “ahhh” for as long as you comfortably can.";
+const VOWEL_SIGN_OFF = "Lovely, thank you, {name}. That's the show for today. Have a lovely day.";
+
+/** What the radio says once the "ahhh" is done. Mirrored in CheckInScript.vowelSignOff(for:). */
+export function vowelSignOff(name: string): string {
+  return VOWEL_SIGN_OFF.replace("{name}", nameOf(name));
 }
 
 // Timings for the radio screen. Mirrored in ios/VoiceReadiness/Models/CheckInScript.swift.

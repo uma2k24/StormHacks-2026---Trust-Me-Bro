@@ -345,6 +345,29 @@ struct PillButtonStyle: ButtonStyle {
     }
 }
 
+/// Home's bottom row: a big rounded tile, icon over label, so a long name still fits.
+struct TileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        configuration.label
+            .font(AppFont.body(20, bold: true))
+            .foregroundStyle(AppTheme.ink)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 92)
+            .background(shape.fill(Color.white))
+            .overlay { shape.stroke(AppTheme.ink, lineWidth: 3) }
+            .hardShadow(shape, offset: pressed ? 0 : 5)
+            .offset(x: pressed ? 5 : 0, y: pressed ? 5 : 0)
+            .animation(.easeOut(duration: 0.09), value: pressed)
+            .sensoryFeedback(.impact(weight: .medium), trigger: pressed) { _, isDown in isDown }
+    }
+}
+
 /// The face of the big round glossy buttons. A plain view, so the radio's talk button
 /// (which needs press *and* release) can use the same look as a normal Button.
 struct OrbFace<Label: View>: View {
@@ -469,7 +492,8 @@ struct BrandMark: View {
     }
 }
 
-/// Mac-style menu bar: brand on the left.
+/// Mac-style menu bar: the brand on the left, and today's date written out on the right so nobody
+/// has to wonder what day it is. Fixed size: it's chrome. Mirrors AppBar.tsx.
 struct AppBar: View {
     var body: some View {
         HStack(spacing: 10) {
@@ -483,6 +507,20 @@ struct AppBar: View {
                 .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 4)
+
+            // re-read every minute, so an app left open overnight turns over to the new day
+            TimelineView(.everyMinute) { context in
+                let today = Daily.dateParts(context.date)
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(today.weekday).font(AppFont.fixedHead(19))
+                    Text(today.date).font(.custom("AtkinsonHyperlegible-Bold", fixedSize: 17))
+                }
+                .foregroundStyle(AppTheme.ink)
+                .lineLimit(1)
+                .fixedSize()
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Today is \(today.weekday), \(today.date)")
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

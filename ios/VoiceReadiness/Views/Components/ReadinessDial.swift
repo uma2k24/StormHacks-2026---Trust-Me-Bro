@@ -20,16 +20,12 @@ struct ReadinessDial: View {
                 GaugeView(needleScore: needleScore, hum: hum)
                     .frame(maxWidth: 300)
 
-                CountingText(value: shownScore)
-                    .font(AppFont.head(numeralSize, relativeTo: .largeTitle))
-                    .foregroundStyle(AppTheme.ink)
-                    .monospacedDigit()
-                    .padding(.top, 4)
-
-                Text("out of 100")
-                    .font(AppFont.head(24, relativeTo: .title3))
-                    .foregroundStyle(AppTheme.inkSoft)
-                    .padding(.top, 6)
+                // the score and "out of 100" share a line, so the whole dial fits on one screen
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) { numeral; outOf }
+                    VStack(spacing: 6) { numeral; outOf }
+                }
+                .padding(.top, 4)
 
                 StatusChip(status: statusColor, label: statusColor.label, large: true)
                     .padding(.top, 16)
@@ -39,6 +35,19 @@ struct ReadinessDial: View {
             .accessibilityLabel("Today's readiness score \(clamped) out of 100. \(statusColor.label).")
         }
         .onAppear(perform: animateIn)
+    }
+
+    private var numeral: some View {
+        CountingText(value: shownScore)
+            .font(AppFont.head(numeralSize, relativeTo: .largeTitle))
+            .foregroundStyle(AppTheme.ink)
+            .monospacedDigit()
+    }
+
+    private var outOf: some View {
+        Text("out of 100")
+            .font(AppFont.head(24, relativeTo: .title3))
+            .foregroundStyle(AppTheme.inkSoft)
     }
 
     private func animateIn() {

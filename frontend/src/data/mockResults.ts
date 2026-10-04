@@ -1,6 +1,8 @@
 import type { ScreeningResults, StatusColor } from "@/types/screening";
 
+/** Placeholder numbers: shown for demo links, and when nothing could be measured. */
 export const mockResults: ScreeningResults = {
+  source: "sample",
   user: "David",
   readinessScore: 68,
   statusColor: "yellow",
@@ -12,28 +14,34 @@ export const mockResults: ScreeningResults = {
       description: "How much the pitch wobbles",
       deviation: 12,
       isWarning: true,
+      reading: { value: 0.84, zone: "borderline" },
     },
     shimmer: {
       status: "Steady",
       description: "How much the volume shakes",
       deviation: 0,
       isWarning: false,
+      reading: { value: 5.6, zone: "healthy" },
     },
     hnr: {
       status: "Slightly lower",
       description: "How clear vs. breathy the voice is",
       deviation: -10,
       isWarning: true,
-    },
-    mpp: {
-      status: "Mostly regular",
-      description: "How regular the vocal cords vibrate",
-      deviation: -4,
-      isWarning: false,
+      reading: { value: 14.1, zone: "borderline" },
     },
   },
+  detail: {
+    probability: 0.52,
+    threshold: 0.646,
+    flagged: false,
+    tasks: [
+      { label: "Sustained vowel", probability: 0.55, weight: 0.41 },
+      { label: "Conversation", probability: 0.5, weight: 0.59 },
+    ],
+  },
   trendData: [
-    { day: "1", score: 90 },
+    { day: "2 weeks ago", score: 90 },
     { day: "2", score: 87 },
     { day: "3", score: 91 },
     { day: "4", score: 86 },

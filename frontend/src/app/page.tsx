@@ -12,7 +12,7 @@ import { SettingsScreen } from "@/components/SettingsScreen";
 import { SignUpScreen } from "@/components/SignUpScreen";
 import { TodayScreen } from "@/components/TodayScreen";
 import { type Briefing, type BriefingSegment, mockBriefingFor } from "@/data/checkInScript";
-import { demoHistory, lastSevenDays, planForToday, streakOf } from "@/data/daily";
+import { demoHistory, lastSevenDays, planForToday, streakOf, trendBefore, yesterdayScore } from "@/data/daily";
 import {
   type AnswerTiming,
   chooseInterests,
@@ -23,8 +23,10 @@ import {
 } from "@/data/learning";
 import { mockResults } from "@/data/mockResults";
 import { demoProfile, type Profile, profileKey } from "@/data/profile";
+import { readinessFrom, resultsFrom } from "@/data/voiceReading";
 import { prefetchClip, unlockRadioVoice } from "@/lib/radioVoice";
 import { primeMicrophone } from "@/lib/recorder";
+import { analyseVoice, type Captured } from "@/lib/voiceClient";
 import {
   loadLearned,
   loadTodaysShow,
@@ -39,10 +41,11 @@ import {
   useTodaysShow,
 } from "@/lib/storage";
 import type { AppScreen } from "@/types/screening";
+import type { VoiceAnalysis } from "@/types/voice";
 
 type Launch = { screen: AppScreen; step: number; demo: boolean };
 
-/** Demo links: ?screen=signup|settings|idle|recording|processing|results|today (and ?step=0-9 for sign-up). */
+/** Demo links: ?screen=signup|settings|idle|recording|processing|results|today (and ?step=0-10 for sign-up). */
 function launchFrom(search: string): Launch {
   const params = new URLSearchParams(search);
   const value = params.get("screen");
@@ -73,6 +76,9 @@ export default function Home() {
   const [navigated, setScreen] = useState<AppScreen | null>(null);
   const screen = navigated ?? launch.screen;
   const [onAir, setOnAir] = useState<Briefing | null>(null);
+  // This morning's voice analysis: in flight while the Processing screen shows, then its answer
+  const [work, setWork] = useState<Promise<void> | null>(null);
+  const [analysis, setAnalysis] = useState<VoiceAnalysis | null>(null);
   // The day this page opened on: a tab left open overnight keeps the show it has.
   const [today] = useState(dayKey);
 
@@ -93,7 +99,11 @@ export default function Home() {
   // The mornings they've tuned in. A demo link has no listener, so it borrows a lived-in week.
   const history = stored ? savedHistory : { ...demoHistory(today), ...savedHistory };
   const doneToday = Boolean(history[today]);
-  const results = { ...mockResults, user: profile?.name ?? "" };
+  // The dashboard is worked out from this morning's voice. Demo links, and a morning that couldn't be
+  // measured, show placeholder numbers (marked as a sample on the screen).
+  const results = analysis
+    ? resultsFrom(profile?.name ?? "", analysis, trendBefore(history, today), yesterdayScore(history, today))
+    : { ...mockResults, user: profile?.name ?? "" };
   const todaysList = planForToday({
     profile: profile ?? demoProfile,
     status: results.statusColor,
@@ -162,10 +172,21 @@ export default function Home() {
     await Promise.race([primeMicrophone(), new Promise((resolve) => window.setTimeout(resolve, 15000))]);
     setScreen("recording");
   }, [briefing]);
-  const finishRecording = useCallback(() => {
-    recordCheckIn(today, mockResults.readinessScore); // today's show is done, whatever happens next
-    setScreen("processing");
-  }, [today]);
+  const finishRecording = useCallback(
+    (captured: Captured) => {
+      recordCheckIn(today, mockResults.readinessScore); // today's show is done, whatever happens next
+      setAnalysis(null);
+      setWork(
+        analyseVoice(captured).then((outcome) => {
+          if (outcome.status !== "done") return;
+          setAnalysis(outcome.analysis);
+          recordCheckIn(today, readinessFrom(outcome.analysis.probability, outcome.analysis.threshold), true);
+        }),
+      );
+      setScreen("processing");
+    },
+    [today],
+  );
   const showResults = useCallback(() => setScreen("results"), []);
   const goHome = useCallback(() => setScreen("idle"), []);
   const openToday = useCallback(() => setScreen("today"), []);
@@ -227,7 +248,7 @@ export default function Home() {
             />
           ) : null}
 
-          {current === "processing" ? <ProcessingScreen onComplete={showResults} /> : null}
+          {current === "processing" ? <ProcessingScreen work={work} onComplete={showResults} /> : null}
 
           {current === "results" && profile ? (
             <ResultsDashboard results={results} onFinish={openToday} />

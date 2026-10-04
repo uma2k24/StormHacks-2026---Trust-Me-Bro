@@ -5,10 +5,11 @@ import { Check } from "lucide-react";
 import { Field } from "@/components/Field";
 import { InterestPicker } from "@/components/InterestPicker";
 import { ShowTimePicker } from "@/components/ShowTimePicker";
+import { TalkSpeedPicker } from "@/components/TalkSpeedPicker";
 import { TextSizePicker } from "@/components/TextSizePicker";
 import { Window } from "@/components/Window";
 import { type Profile, tidyProfile } from "@/data/profile";
-import { saveTextSize, useTextSize } from "@/lib/storage";
+import { saveTalkSpeed, saveTextSize, useTalkSpeed, useTextSize } from "@/lib/storage";
 
 type SettingsScreenProps = {
   profile: Profile;
@@ -17,14 +18,15 @@ type SettingsScreenProps = {
 };
 
 /**
- * Everything chosen at sign-up, in one place. Text size changes the page the moment it is tapped;
- * the rest is saved when the person taps Done, so today's show is only rewritten once.
+ * Everything chosen at sign-up, in one place. Text size and talking speed change the moment they
+ * are tapped; the rest is saved when the person taps Done, so today's show is only rewritten once.
  */
 export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
   const [draft, setDraft] = useState<Profile>(profile);
   const [nameError, setNameError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
   const textSize = useTextSize();
+  const talkSpeed = useTalkSpeed();
 
   const update = (changes: Partial<Profile>) => setDraft((current) => ({ ...current, ...changes }));
 
@@ -144,6 +146,13 @@ export function SettingsScreen({ profile, onDone }: SettingsScreenProps) {
             How big should the writing be?
           </p>
           <TextSizePicker value={textSize} onChange={saveTextSize} labelledBy="settings-size" />
+        </Window>
+
+        <Window title="Talking speed" index={5}>
+          <p id="settings-speed" className="field-label mb-3">
+            How fast should the radio talk?
+          </p>
+          <TalkSpeedPicker value={talkSpeed} onChange={saveTalkSpeed} labelledBy="settings-speed" />
         </Window>
       </div>
 

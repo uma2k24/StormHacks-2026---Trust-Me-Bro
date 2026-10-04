@@ -9,16 +9,26 @@ import {
   ACKNOWLEDGE_MS,
   AFTER_REPLY_MS,
   type BriefingSegment,
+  extraTurn,
   fallbackReply,
   GIVE_UP_LINE,
   HANDS_FREE_GAP_MS,
   LISTEN_MS,
+  MAX_EXTRA_QUESTIONS,
   MIC_BLOCKED_LINE,
   MIC_MISSING_LINE,
   MIN_HOLD_MS,
+  MIN_SPEECH_MS,
   MISSED_LINE,
   RECEIVE_MS,
   THINKING_LINE,
+  VOWEL_AGAIN_LINE,
+  VOWEL_LISTENING_LINE,
+  VOWEL_MIN_MS,
+  VOWEL_TARGET_MS,
+  VOWEL_TRIES,
+  vowelSignOff,
+  vowelTurn,
   wordsSpoken,
 } from "@/data/checkInScript";
 import { reminderLine } from "@/data/daily";
@@ -27,6 +37,7 @@ import type { Profile } from "@/data/profile";
 import { fetchReply, transcribeAnswer } from "@/lib/conversationClient";
 import { prefetchClip, prepareClip, speak, wait } from "@/lib/radioVoice";
 import { MicError, type Recorder, type Recording, startRecording } from "@/lib/recorder";
+import type { Captured } from "@/lib/voiceClient";
 
 /**
  * The morning show is one little radio with one line of text on its screen, and nobody has to
@@ -47,6 +58,11 @@ import { MicError, type Recorder, type Recording, startRecording } from "@/lib/r
  * It's a real conversation: the answer is recorded, ElevenLabs turns it into words, and Gemini writes
  * the host's reply (with today's weather and news for what you're into). Without a microphone,
  * a key or a backend it falls back to a sample answer after a moment, so the show still plays.
+ *
+ * The answers are also what the voice analysis listens to, so the show keeps asking plain questions
+ * ("chat" turns, no Gemini) after the last briefing segment until enough talking has been heard, and
+ * always ends with the sustained "ahhh" (the "vowel" turn): the jitter, shimmer and HNR are measured
+ * on it. Everything that was recorded is handed to onComplete.
  * Mirrored in ios/VoiceReadiness/Views/RecordingView.swift.
  */
 type Phase =
@@ -66,7 +82,8 @@ type ActiveScreenProps = {
   profile: Profile;
   /** Called each time the listener finishes an answer, with how they went about it. */
   onAnswer: (segment: BriefingSegment, timing: AnswerTiming) => void;
-  onComplete: () => void;
+  /** The show is over, with what was recorded for the voice analysis. */
+  onComplete: (captured: Captured) => void;
 };
 
 /** Longer text reads a size down so it usually fits; whatever still doesn't fit scrolls. */
@@ -105,6 +122,9 @@ function LiveWords({ text, revealed }: { text: string; revealed: number }) {
 }
 
 export function ActiveScreen({ segments, profile, onAnswer, onComplete }: ActiveScreenProps) {
+  // The briefing's segments, then (as needed) extra questions, then the "ahhh". Grows as the show goes.
+  const [turns, setTurns] = useState(segments);
+  const turnsRef = useRef(segments);
   const [turnIndex, setTurnIndex] = useState(0);
   const [phase, setPhaseState] = useState<Phase>("briefing");
   // what they said (shown while the host thinks), and the radio's own line when it isn't the segment's
@@ -126,6 +146,15 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   const sample = useRef(false);
   // answers that came back empty, for this segment
   const missed = useRef(0);
+  // true once transcription isn't possible (no key, no backend): the answers are still recorded, the show plays sample answers
+  const noTranscript = useRef(false);
+  // what has been recorded for the voice analysis, and how much of it is talking
+  const captured = useRef<Captured>({ speech: [], vowel: null });
+  const talkedMs = useRef(0);
+  const extrasAsked = useRef(0);
+  const vowelTries = useRef(0);
+  // the last question went unanswered twice: more questions won't help
+  const gaveUp = useRef(false);
   // what they said earlier in the show, so a reply can pick up where they left off
   const earlier = useRef<{ topic: string; said: string }[]>([]);
   // everything that happens once an answer is in; aborted when they tap Talk to answer early, or leave
@@ -136,9 +165,11 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   const captionScroll = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState<ScrollState>("none");
 
-  const totalTurns = segments.length;
-  const turn = segments[Math.min(turnIndex, totalTurns - 1)];
-  const segmentNumber = Math.min(turnIndex + 1, totalTurns);
+  // One lamp for each briefing segment and one for the last stretch (any extra questions, then the "ahhh").
+  const totalTurns = segments.length + 1;
+  const lampIndex = Math.min(turnIndex, segments.length);
+  const turn = turns[Math.min(turnIndex, turns.length - 1)];
+  const segmentNumber = lampIndex + 1;
 
   const setPhase = (next: Phase) => {
     phaseRef.current = next;
@@ -158,7 +189,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
 
   // Each segment: read the brief, ask the question, then open the microphone by itself.
   useEffect(() => {
-    const segment = segments[turnIndex];
+    const segment = turnsRef.current[turnIndex];
     if (!segment) return;
     const controller = new AbortController();
     const { signal } = controller;
@@ -166,8 +197,8 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
 
     prefetchClip(segment.brief);
     prefetchClip(segment.question);
-    // warm up the next segment while this one plays
-    const upcoming = segments[turnIndex + 1];
+    // warm up the next segment while this one plays (after the last one, the "ahhh")
+    const upcoming = turnsRef.current[turnIndex + 1] ?? (turnIndex === segments.length - 1 ? vowelTurn(profile.name) : undefined);
     if (upcoming) {
       prefetchClip(upcoming.brief);
       prefetchClip(upcoming.question);
@@ -191,7 +222,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     })();
 
     return () => controller.abort();
-  }, [turnIndex, segments, say]);
+    // the turns are read from a ref: asking another question must not restart the one being asked
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnIndex, say]);
 
   const measureScroll = useCallback(() => {
     const box = captionScroll.current;
@@ -238,7 +271,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
   const closeShow = async () => {
     const line = reminderLine(profile);
     if (!line) {
-      onComplete();
+      onComplete(captured.current);
       return;
     }
     pipeline.current?.abort();
@@ -251,14 +284,31 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     setPhase("closing");
     await say(line, signal);
     await wait(AFTER_REPLY_MS, signal);
-    if (!signal.aborted) onComplete();
+    if (!signal.aborted) onComplete(captured.current);
   };
 
+  /** Moves to the next turn, which may have to be made up: another question, or the "ahhh". */
   const advance = () => {
     const next = turnIndex + 1;
-    if (next >= totalTurns) {
-      void closeShow();
-      return;
+    if (next >= turnsRef.current.length) {
+      const needMore =
+        turn.kind !== "vowel" &&
+        !sample.current &&
+        !gaveUp.current &&
+        talkedMs.current < MIN_SPEECH_MS &&
+        extrasAsked.current < MAX_EXTRA_QUESTIONS;
+      const following =
+        turn.kind === "vowel" || sample.current // with no microphone there is nothing to measure, so no "ahhh"
+          ? null
+          : needMore
+            ? extraTurn(extrasAsked.current++, profile.name)
+            : vowelTurn(profile.name);
+      if (!following) {
+        void closeShow();
+        return;
+      }
+      turnsRef.current = [...turnsRef.current, following];
+      setTurns(turnsRef.current);
     }
     setPhase("briefing");
     setRevealed(0);
@@ -293,6 +343,7 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     if (signal.aborted) return;
 
     if (giveUp) {
+      gaveUp.current = true;
       setPhase("replying");
       await say(line, signal);
       await wait(AFTER_REPLY_MS, signal);
@@ -303,11 +354,41 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     await sayThenListen(line, signal);
   };
 
+  /** Keeps what was just recorded for the voice analysis. */
+  const keep = (recording: Recording) => {
+    captured.current.speech.push(recording);
+    talkedMs.current += recording.voicedMs;
+  };
+
+  /** The sustained "ahhh" is in. Too short, and the radio asks once more; otherwise it signs off. */
+  const finishVowel = async (recording: Recording, signal: AbortSignal) => {
+    vowelTries.current += 1;
+    const best = captured.current.vowel;
+    if (!best || recording.voicedMs > best.voicedMs) captured.current.vowel = recording;
+
+    if (recording.voicedMs < VOWEL_MIN_MS && vowelTries.current < VOWEL_TRIES) {
+      setSpoken(VOWEL_AGAIN_LINE);
+      await prepareClip(VOWEL_AGAIN_LINE, signal);
+      if (signal.aborted) return;
+      setPhase("notice");
+      await sayThenListen(VOWEL_AGAIN_LINE, signal);
+      return;
+    }
+
+    const line = vowelSignOff(profile.name);
+    setSpoken(line);
+    await prepareClip(line, signal);
+    if (signal.aborted) return;
+    setPhase("replying");
+    await say(line, signal);
+    await wait(AFTER_REPLY_MS, signal);
+    if (!signal.aborted) advance();
+  };
+
   /** The real thing: stop recording, turn it into words, show them, and let the host answer. */
   const finishLive = async () => {
     const segment = turn;
     const index = turnIndex;
-    const last = index === totalTurns - 1;
 
     pipeline.current?.abort();
     const controller = new AbortController();
@@ -325,12 +406,20 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     if (!recording) return;
     const timing = timingOf(recording, askedAt.current);
 
-    const heard = await transcribeAnswer(recording.blob, signal);
+    // an "ahhh" has no words to turn into text
+    if (segment.kind === "vowel") {
+      await finishVowel(recording, signal);
+      return;
+    }
+
+    const heard = noTranscript.current ? ({ status: "unavailable" } as const) : await transcribeAnswer(recording.blob, signal);
     if (signal.aborted) return;
 
     if (heard.status === "unavailable") {
-      // No transcription (no key, no backend): carry on with sample answers for the rest of the show.
-      sample.current = true;
+      // No transcription (no key, no backend): the answers are still recorded for the voice analysis,
+      // but the rest of the show plays sample answers.
+      noTranscript.current = true;
+      if (recording.speechStartMs !== null) keep(recording);
       finishSample(timing);
       return;
     }
@@ -339,24 +428,30 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
       return;
     }
 
+    gaveUp.current = false;
+    keep(recording);
     setSaid(heard.text);
     setPhase("heard");
     onAnswer(segment, timing);
 
     // Their words stay up for a moment at least. The reply (and its voice) is ready before the screen changes.
+    // Only the briefing's own segments get a reply written by Gemini; an extra question gets a fixed warm line.
     const reply = (async () => {
-      const text =
-        (await fetchReply(
-          { profile, segment, transcript: heard.text, earlier: earlier.current, index, last },
-          signal,
-        )) ?? fallbackReply(profile.name, index, last);
+      const written =
+        segment.kind === "chat"
+          ? null
+          : await fetchReply(
+              { profile, segment, transcript: heard.text, earlier: earlier.current, index, last: false },
+              signal,
+            );
+      const text = written ?? fallbackReply(profile.name, index, false);
       await prepareClip(text, signal);
       return text;
     })();
     const [text] = await Promise.all([reply, wait(ACKNOWLEDGE_MS, signal)]);
     if (signal.aborted) return;
 
-    earlier.current = [...earlier.current, { topic: segment.topic, said: heard.text }];
+    if (segment.kind !== "chat") earlier.current = [...earlier.current, { topic: segment.topic, said: heard.text }];
     setSpoken(text);
     setPhase("replying");
     await say(text, signal);
@@ -403,7 +498,10 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     }
 
     recorderReady.current = false;
-    const opening = startRecording(() => endRef.current());
+    const opening = startRecording(
+      () => endRef.current(),
+      turn.kind === "vowel" ? { untouched: true, voicedTargetMs: VOWEL_TARGET_MS } : {},
+    );
     recorder.current = opening;
     opening.then(
       (open) => {
@@ -451,7 +549,9 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
     phase === "briefing"
       ? turn.brief
       : phase === "listening"
-        ? "Listening…"
+        ? turn.kind === "vowel"
+          ? VOWEL_LISTENING_LINE
+          : "Listening…"
         : phase === "thinking"
           ? THINKING_LINE
           : phase === "heard"
@@ -501,12 +601,12 @@ export function ActiveScreen({ segments, profile, onAnswer, onComplete }: Active
             aria-valuenow={segmentNumber}
             aria-valuetext={`Segment ${segmentNumber} of ${totalTurns}`}
           >
-            {segments.map((item, index) => (
+            {Array.from({ length: totalTurns }, (_, index) => (
               <span
-                key={item.id}
+                key={index}
                 className="led"
                 data-state={
-                  index < turnIndex ? "done" : index === turnIndex ? "current" : "todo"
+                  index < lampIndex ? "done" : index === lampIndex ? "current" : "todo"
                 }
               />
             ))}

@@ -29,3 +29,6 @@ Do not assume updating only `frontend/` is enough — the Xcode simulator runs t
 | `frontend/src/components/ResultsDashboard.tsx` | `ios/VoiceReadiness/Views/ResultsView.swift` |
 | `frontend/src/data/checkInScript.ts` | `ios/VoiceReadiness/Models/CheckInScript.swift` |
 | `frontend/src/data/mockResults.ts` | `ios/VoiceReadiness/Models/ScreeningModels.swift` |
+| `frontend/src/data/voiceReading.ts` | `ios/VoiceReadiness/Models/VoiceReading.swift` |
+| `frontend/src/lib/voiceClient.ts`, `frontend/src/types/voice.ts` | `ios/VoiceReadiness/Models/VoiceAnalysis.swift` |
+| `frontend/src/components/VitalsGrid.tsx`, `VitalDetail.tsx` | `ios/VoiceReadiness/Views/Components/VitalsGrid.swift`, `VitalDetailView.swift` |

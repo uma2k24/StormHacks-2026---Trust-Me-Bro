@@ -6,14 +6,15 @@ import { Field } from "@/components/Field";
 import { InterestPicker } from "@/components/InterestPicker";
 import { PagerDots } from "@/components/PagerDots";
 import { ShowTimePicker } from "@/components/ShowTimePicker";
+import { TalkSpeedPicker } from "@/components/TalkSpeedPicker";
 import { TextSizePicker } from "@/components/TextSizePicker";
 import { emptyProfile, type Profile, tidyProfile } from "@/data/profile";
-import { saveTextSize, useTextSize } from "@/lib/storage";
+import { saveTalkSpeed, saveTextSize, useTalkSpeed, useTextSize } from "@/lib/storage";
 
 /**
  * First visit: set up the show one question at a time. Nothing is saved until the last step, so
- * leaving half way never leaves half a profile behind. (The text size is the exception: it
- * changes the page as soon as it is chosen, so the person can see what they picked.)
+ * leaving half way never leaves half a profile behind. (Text size and talking speed are the
+ * exceptions: they apply as soon as they are chosen, so the person can try them out.)
  */
 const STEP_TITLES = [
   "Welcome",
@@ -25,6 +26,7 @@ const STEP_TITLES = [
   "A daily reminder",
   "Your radio time",
   "Text size",
+  "Talking speed",
   "All set",
 ] as const;
 
@@ -41,6 +43,7 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
   const [draft, setDraft] = useState<Profile>(emptyProfile);
   const [nameError, setNameError] = useState("");
   const textSize = useTextSize();
+  const talkSpeed = useTalkSpeed();
 
   const update = (changes: Partial<Profile>) => setDraft((current) => ({ ...current, ...changes }));
   const firstName = draft.name.trim();
@@ -248,6 +251,20 @@ export function SignUpScreen({ onComplete, initialStep = 0 }: SignUpScreenProps)
               </p>
             </header>
             <TextSizePicker value={textSize} onChange={saveTextSize} labelledBy="signup-size" />
+          </>
+        ) : null}
+
+        {step === 9 ? (
+          <>
+            <header className="pop-in">
+              <h1 id="signup-speed" className="display h2">
+                How fast should the radio talk?
+              </h1>
+              <p className="lede mx-auto mt-3 max-w-[24rem]">
+                Tap one. You can change it any time in Settings.
+              </p>
+            </header>
+            <TalkSpeedPicker value={talkSpeed} onChange={saveTalkSpeed} labelledBy="signup-speed" />
           </>
         ) : null}
 

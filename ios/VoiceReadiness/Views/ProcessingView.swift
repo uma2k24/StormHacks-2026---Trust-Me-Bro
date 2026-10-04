@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ProcessingView: View {
+    /// The voice analysis. The loader fills most of the way by itself, then waits here until it is done.
+    let work: Task<Void, Never>?
     let onComplete: () -> Void
 
     private let messages = [
@@ -16,6 +18,8 @@ struct ProcessingView: View {
     @ScaledMetric(relativeTo: .title) private var messageSize: CGFloat = 34
     @State private var filled = 0
     @State private var loopTask: Task<Void, Never>?
+    @State private var watchTask: Task<Void, Never>?
+    @State private var finished = false
 
     private var messageIndex: Int {
         min(Int(Double(filled) / Double(Self.blockCount) * Double(messages.count)), messages.count - 1)
@@ -92,11 +96,19 @@ struct ProcessingView: View {
     }
 
     private func start() {
+        finished = work == nil
+        watchTask = Task { @MainActor in
+            await work?.value
+            finished = true
+        }
         loopTask = Task { @MainActor in
-            for _ in 0..<Self.blockCount {
-                try? await Task.sleep(for: Self.tick)
+            while filled < Self.blockCount {
+                try? await Task.sleep(for: finished ? Self.tick / 3 : Self.tick)
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 0.2)) { filled += 1 }
+                // two blocks short of the end until the analysis is in, then the rest fill quickly
+                if filled < (finished ? Self.blockCount : Self.blockCount - 2) {
+                    withAnimation(.easeOut(duration: 0.2)) { filled += 1 }
+                }
             }
             try? await Task.sleep(for: Self.tick)
             guard !Task.isCancelled else { return }
@@ -107,5 +119,7 @@ struct ProcessingView: View {
     private func cleanup() {
         loopTask?.cancel()
         loopTask = nil
+        watchTask?.cancel()
+        watchTask = nil
     }
 }

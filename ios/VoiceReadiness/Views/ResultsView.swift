@@ -4,7 +4,8 @@ import SwiftUI
 /// Mirrors ResultsDashboard.tsx on the web.
 struct ResultsView: View {
     let results: ScreeningResults
-    let onRestart: () -> Void
+    /// After the last page: on to the day's list.
+    let onFinish: () -> Void
 
     private static let pageTitles = [
         "Today's readiness",
@@ -13,8 +14,10 @@ struct ResultsView: View {
         "Readiness over 14 days"
     ]
 
-    @ScaledMetric(relativeTo: .title) private var headlineSize: CGFloat = 30
+    @ScaledMetric(relativeTo: .title) private var headlineSize: CGFloat = 27
     @State private var page = ResultsView.initialPage()
+    // A vital that has been tapped: its numbers replace the page until they go back.
+    @State private var detail: MeasureKey? = ResultsView.initialDetail()
 
     private var isLast: Bool { page == Self.pageTitles.count - 1 }
 
@@ -31,6 +34,22 @@ struct ResultsView: View {
         return 0
     }
 
+    /// DEBUG builds accept `-detail jitter|shimmer|hnr` to open a vital's numbers (for demos and screenshots).
+    private static func initialDetail() -> MeasureKey? {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-detail"), args.indices.contains(index + 1) {
+            switch args[index + 1] {
+            case "jitter": return .jitter
+            case "shimmer": return .shimmer
+            case "hnr": return .hnr
+            default: break
+            }
+        }
+        #endif
+        return nil
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { proxy in
@@ -43,7 +62,7 @@ struct ResultsView: View {
                     .padding(.vertical, 20)
                     // short pages sit in the middle of the screen
                     .frame(minHeight: proxy.size.height)
-                    .id(page)
+                    .id(detail.map { "detail-\($0)" } ?? "page-\(page)")
                 }
                 .scrollBounceBehavior(.basedOnSize)
             }
@@ -55,45 +74,84 @@ struct ResultsView: View {
                 "Page \(newPage + 1) of \(Self.pageTitles.count): \(Self.pageTitles[newPage])"
             ).post()
         }
+        .onChange(of: detail) { _, key in
+            if let key {
+                AccessibilityNotification.Announcement("The numbers for \(VoiceReading.measure(key).label)").post()
+            }
+        }
     }
 
     @ViewBuilder
     private var pageContent: some View {
-        switch page {
-        case 0:
-            header
-            ReadinessDial(
-                score: results.readinessScore,
-                statusColor: results.statusColor
-            )
-        case 1:
-            AiSummaryCard(summary: results.aiSummary)
-        case 2:
-            VitalsGrid(metrics: results.metrics)
-        default:
-            TrendChartView(data: results.trendData)
+        if let detail {
+            VitalDetailView(results: results, focus: detail)
+        } else {
+            switch page {
+            case 0:
+                header
+                ReadinessDial(
+                    score: results.readinessScore,
+                    statusColor: results.statusColor
+                )
+                if results.source == .sample {
+                    Text("These are sample numbers. Your voice couldn’t be measured today.")
+                        .font(AppFont.body(17))
+                        .foregroundStyle(AppTheme.inkSoft)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, -12)
+                }
+            case 1:
+                AiSummaryCard(summary: results.aiSummary)
+            case 2:
+                VitalsGrid(metrics: results.metrics, onOpen: { detail = $0 })
+            default:
+                TrendChartView(data: results.trendData)
+            }
         }
     }
 
     private var header: some View {
         CenteredFlowLayout(spacing: headlineSize * 0.26) {
             Text("Thanks,")
-            Text(results.user).markerHighlight(size: headlineSize)
-            Text("—")
-            ForEach(["here's", "how", "you're", "looking", "today."], id: \.self) { word in
-                Text(word)
+            // the name and its exclamation mark travel together
+            HStack(spacing: 0) {
+                Text(results.user).markerHighlight(size: headlineSize)
+                Text("!")
             }
         }
         .font(AppFont.head(headlineSize, relativeTo: .title))
         .tracking(-0.6)
         .foregroundStyle(AppTheme.ink)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Thanks, \(results.user) — here's how you're looking today.")
+        .accessibilityLabel("Thanks, \(results.user)!")
         .accessibilityAddTraits(.isHeader)
         .popIn(0)
     }
 
     private var nav: some View {
+        VStack(spacing: 16) {
+            if detail != nil {
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { detail = nil }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.left").font(.system(size: 20, weight: .bold))
+                        Text("Back to my vitals")
+                    }
+                }
+                .buttonStyle(PillButtonStyle(fill: AppTheme.accent))
+            } else {
+                pagerNav
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.trailing, AppTheme.pop)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+    }
+
+    private var pagerNav: some View {
         VStack(spacing: 16) {
             HStack(spacing: 11) {
                 ForEach(0..<Self.pageTitles.count, id: \.self) { index in
@@ -122,10 +180,10 @@ struct ResultsView: View {
                 }
 
                 if isLast {
-                    Button(action: onRestart) {
+                    Button(action: onFinish) {
                         HStack(spacing: 10) {
-                            Image(systemName: "arrow.counterclockwise").font(.system(size: 20, weight: .bold))
-                            Text("Start New Check-in")
+                            Image(systemName: "checklist").font(.system(size: 20, weight: .bold))
+                            Text("Your day")
                         }
                     }
                     .buttonStyle(PillButtonStyle(fill: AppTheme.accent))
@@ -142,9 +200,5 @@ struct ResultsView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.trailing, AppTheme.pop)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
     }
 }

@@ -8,7 +8,7 @@
 
 import { dayKey } from "@/data/learning";
 import type { Profile } from "@/data/profile";
-import type { Metric, StatusColor } from "@/types/screening";
+import type { Metric, StatusColor, TrendPoint } from "@/types/screening";
 
 // ---- the time of day ----------------------------------------------------------------------------
 
@@ -32,8 +32,12 @@ export function dateParts(date: Date = new Date()): { weekday: string; date: str
 
 // ---- mornings tuned in --------------------------------------------------------------------------
 
-/** One morning's check-in: the readiness score and which of the day's little things are ticked off. */
-export type DayRecord = { score: number; done: string[] };
+/**
+ * One morning's check-in: the readiness score and which of the day's little things are ticked off.
+ * `measured` is true when the score was worked out from their voice (it can be missing on mornings
+ * saved by older versions); only measured mornings are drawn on the trend.
+ */
+export type DayRecord = { score: number; done: string[]; measured?: boolean };
 
 /** Keyed by dayKey() ("2026-10-03"). */
 export type History = Record<string, DayRecord>;
@@ -79,6 +83,30 @@ export function streakOf(history: History, today: string): number {
 
 export function streakLine(streak: number): string {
   return streak <= 1 ? "A lovely start!" : `${streak} mornings in a row!`;
+}
+
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** How many days the trend chart looks back over, today included. */
+export const TREND_DAYS = 14;
+
+/** The measured mornings before today within the trend's window, oldest first, labelled "Oct 1". */
+export function trendBefore(history: History, today: string): TrendPoint[] {
+  const points: TrendPoint[] = [];
+  for (let back = TREND_DAYS - 1; back >= 1; back--) {
+    const day = shiftDay(today, -back);
+    const record = history[day];
+    if (!record?.measured) continue;
+    const [, month, date] = day.split("-").map(Number);
+    points.push({ day: `${MONTHS_SHORT[month - 1]} ${date}`, score: record.score });
+  }
+  return points;
+}
+
+/** Yesterday's score, if that morning was measured. */
+export function yesterdayScore(history: History, today: string): number | undefined {
+  const record = history[shiftDay(today, -1)];
+  return record?.measured ? record.score : undefined;
 }
 
 /** A lived-in week for demo links, so the lamps aren't all dark: five of the six days before today. */

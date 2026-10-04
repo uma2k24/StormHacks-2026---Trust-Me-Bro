@@ -19,7 +19,10 @@ export class MicError extends Error {
   }
 }
 
-export type EndReason = "silence" | "no-speech" | "limit";
+export type EndReason = "silence" | "no-speech" | "limit" | "target";
+
+/** What the microphone heard, uncompressed (mono, at the sound card's own sample rate). */
+export type RawAudio = { samples: Float32Array; sampleRate: number };
 
 export type Recording = {
   blob: Blob;
@@ -31,6 +34,24 @@ export type Recording = {
   speechStartMs: number | null;
   /** From their first word to their last: how long they actually talked. */
   speechMs: number;
+  /** Time actually spent talking: speechMs less the pauses between words and sentences. */
+  voicedMs: number;
+  /**
+   * The same recording, uncompressed, for measuring the voice (the blob is squeezed for sending to
+   * speech-to-text, which blurs the fine detail jitter and shimmer are made of). Null when the
+   * browser can't give it, and the blob is analysed instead.
+   */
+  raw: RawAudio | null;
+};
+
+export type RecordOptions = {
+  /**
+   * Record the voice as it is: no echo cancelling, noise suppression or automatic gain, which would
+   * flatten the very wobbles being measured. Used for the sustained "ahhh".
+   */
+  untouched?: boolean;
+  /** Stop by itself once this much talking has been heard (the sustained "ahhh"). */
+  voicedTargetMs?: number;
 };
 
 export type Recorder = {
@@ -59,16 +80,56 @@ export async function primeMicrophone(): Promise<void> {
   }
 }
 
+// Copies what the microphone hears, 4096 samples at a time, to the page.
+const TAP_WORKLET = `
+class AnswerTap extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.chunk = new Float32Array(4096);
+    this.filled = 0;
+  }
+  process(inputs) {
+    const channel = inputs[0] && inputs[0][0];
+    if (!channel) return true;
+    for (let i = 0; i < channel.length; i++) {
+      this.chunk[this.filled++] = channel[i];
+      if (this.filled === this.chunk.length) {
+        this.port.postMessage(this.chunk, [this.chunk.buffer]);
+        this.chunk = new Float32Array(4096);
+        this.filled = 0;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor("answer-tap", AnswerTap);
+`;
+
+/** The chunks the tap sent, as one recording; null when there were none. */
+function rawOf(chunks: Float32Array[], sampleRate: number): RawAudio | null {
+  if (!chunks.length || !sampleRate) return null;
+  const samples = new Float32Array(chunks.length * chunks[0].length);
+  chunks.forEach((chunk, index) => samples.set(chunk, index * chunk.length));
+  return { samples, sampleRate };
+}
+
+/** A pause shorter than this between words doesn't stop the clock on how long they have talked. */
+const VOICED_HANGOVER_MS = 300;
+
 /** Opens the microphone and starts recording. Rejects with a MicError when it can't. */
-export async function startRecording(onEnd: (reason: EndReason) => void): Promise<Recorder> {
+export async function startRecording(
+  onEnd: (reason: EndReason) => void,
+  options: RecordOptions = {},
+): Promise<Recorder> {
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     throw new MicError("unavailable"); // an old browser, or a page that isn't https / localhost
   }
 
   let stream: MediaStream;
   try {
+    const processing = !options.untouched;
     stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audio: { echoCancellation: processing, noiseSuppression: processing, autoGainControl: processing },
     });
   } catch (error) {
     const name = error instanceof DOMException ? error.name : "";
@@ -90,15 +151,31 @@ export async function startRecording(onEnd: (reason: EndReason) => void): Promis
   let heardSpeech = false;
   let firstLoudAt = 0;
   let lastLoudAt = startedAt;
+  let voicedMs = 0;
+  let lastTickAt = startedAt;
   let ended = false;
   let context: AudioContext | null = null;
   let analyser: AnalyserNode | null = null;
+  const rawChunks: Float32Array[] = [];
   try {
     context = new AudioContext();
     void context.resume();
     analyser = context.createAnalyser();
     analyser.fftSize = 1024;
-    context.createMediaStreamSource(stream).connect(analyser);
+    const source = context.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    // the uncompressed copy; without it the compressed recording is analysed instead
+    try {
+      const url = URL.createObjectURL(new Blob([TAP_WORKLET], { type: "application/javascript" }));
+      await context.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url));
+      const tap = new AudioWorkletNode(context, "answer-tap", { numberOfOutputs: 1, outputChannelCount: [1] });
+      tap.port.onmessage = (event: MessageEvent<Float32Array>) => rawChunks.push(event.data);
+      source.connect(tap);
+      tap.connect(context.destination); // it writes no output, so this is silent; it keeps the tap running
+    } catch {
+      // the compressed recording is analysed instead
+    }
   } catch {
     analyser = null; // no level meter: only the time limit and the Done button end the answer
   }
@@ -106,6 +183,8 @@ export async function startRecording(onEnd: (reason: EndReason) => void): Promis
   const samples = new Float32Array(analyser?.fftSize ?? 0);
   const timer = window.setInterval(() => {
     const now = Date.now();
+    const sinceTick = now - lastTickAt;
+    lastTickAt = now;
     if (analyser) {
       analyser.getFloatTimeDomainData(samples);
       let sum = 0;
@@ -116,19 +195,22 @@ export async function startRecording(onEnd: (reason: EndReason) => void): Promis
         heardSpeech = true;
         lastLoudAt = now;
       }
+      if (heardSpeech && now - lastLoudAt < VOICED_HANGOVER_MS) voicedMs += sinceTick;
     }
 
     if (ended) return;
     const reason: EndReason | null =
       now - startedAt >= MAX_ANSWER_MS
         ? "limit"
-        : held || !analyser
-          ? null
-          : heardSpeech && now - lastLoudAt >= SILENCE_END_MS
-            ? "silence"
-            : !heardSpeech && now - startedAt >= NO_SPEECH_MS
-              ? "no-speech"
-              : null;
+        : options.voicedTargetMs && voicedMs >= options.voicedTargetMs
+          ? "target"
+          : held || !analyser
+            ? null
+            : heardSpeech && now - lastLoudAt >= SILENCE_END_MS
+              ? "silence"
+              : !heardSpeech && now - startedAt >= NO_SPEECH_MS
+                ? "no-speech"
+                : null;
     if (reason) {
       ended = true;
       onEnd(reason);
@@ -156,6 +238,8 @@ export async function startRecording(onEnd: (reason: EndReason) => void): Promis
             startedAt,
             speechStartMs: heardSpeech ? firstLoudAt - startedAt : null,
             speechMs: heardSpeech ? lastLoudAt - firstLoudAt : 0,
+            voicedMs,
+            raw: rawOf(rawChunks, context?.sampleRate ?? 0),
           });
         };
         if (recorder.state === "inactive") return finish();

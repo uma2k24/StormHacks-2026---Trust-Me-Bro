@@ -1,7 +1,7 @@
 import SwiftUI
 
-// Shared pieces of the sign-up and settings screens. Mirror Field, InterestPicker, TextSizePicker
-// and PagerDots on the web.
+// Shared pieces of the sign-up and settings screens. Mirror Field, InterestPicker, TextSizePicker,
+// TalkSpeedPicker and PagerDots on the web.
 
 // MARK: - Text field
 
@@ -15,6 +15,8 @@ struct LabelledField: View {
     var error: String?
     var maxLength = 60
     var capitalization: TextInputAutocapitalization = .words
+    /// `.phonePad` brings up the number keypad.
+    var keyboard: UIKeyboardType = .default
     var contentType: UITextContentType?
     var submitLabel: SubmitLabel = .next
     var autoFocus = false
@@ -51,6 +53,7 @@ struct LabelledField: View {
             .foregroundStyle(AppTheme.ink)
             .tint(AppTheme.ink)
             .textInputAutocapitalization(capitalization)
+            .keyboardType(keyboard)
             .textContentType(contentType)
             .autocorrectionDisabled()
             .submitLabel(submitLabel)
@@ -194,6 +197,72 @@ struct TextSizePicker: View {
         }
         .padding(.trailing, 4)
         .padding(.bottom, 4)
+    }
+}
+
+/// Slow, Steady or Fast — same tick-box pattern as text size. Mirrors TalkSpeedPicker.tsx.
+struct TalkSpeedPicker: View {
+    @Binding var selection: TalkSpeedStep
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(TalkSpeedStep.allCases) { step in
+                let on = selection == step
+                Button {
+                    selection = step
+                } label: {
+                    HStack(spacing: 12) {
+                        ChoiceBox(on: on)
+                        Text(step.label).font(AppFont.fixedHead(28))
+                    }
+                    .frame(minHeight: 48)
+                }
+                .buttonStyle(ChoiceButtonStyle(selected: on))
+                .accessibilityLabel("\(step.label) talking speed")
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(.trailing, 4)
+        .padding(.bottom, 4)
+    }
+}
+
+// MARK: - Show time
+
+/// When the radio should remind them it's ready: two columns of times, "No reminder" across the
+/// bottom. Picking a time asks for notification permission there and then, so the question makes
+/// sense where it appears. Mirrors ShowTimePicker.tsx (which offers a calendar event instead).
+struct ShowTimePicker: View {
+    @Binding var selection: ShowTime
+
+    var body: some View {
+        VStack(spacing: 12) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(ShowTime.allCases.filter { $0 != .off }) { time in choice(time) }
+            }
+            choice(.off)
+        }
+        .padding(.trailing, 4)
+        .padding(.bottom, 4)
+        .onChange(of: selection) { _, time in
+            guard time != .off else { return }
+            Task { await MorningReminder.requestPermission() }
+        }
+    }
+
+    private func choice(_ time: ShowTime) -> some View {
+        let on = selection == time
+        return Button {
+            selection = time
+        } label: {
+            HStack(spacing: 10) {
+                ChoiceBox(on: on)
+                Text(time.label).font(AppFont.body(19, bold: true))
+            }
+        }
+        .buttonStyle(ChoiceButtonStyle(selected: on))
+        .accessibilityLabel(time == .off ? "No reminder" : "Remind me at \(time.label)")
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

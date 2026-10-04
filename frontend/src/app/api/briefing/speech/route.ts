@@ -27,8 +27,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         text,
         model_id: process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
-        // a calm, even morning-radio read
-        voice_settings: { stability: 0.6, similarity_boost: 0.75, speed: 0.95 },
+        // a calm morning-radio read, a touch brisk so segments don't drag
+        voice_settings: { stability: 0.6, similarity_boost: 0.75, speed: 1.15 },
       }),
       signal: AbortSignal.timeout(20000),
     },

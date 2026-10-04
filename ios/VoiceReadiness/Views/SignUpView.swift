@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// First launch: set up the show one question at a time. Nothing is saved until the last step, so
-/// leaving half way never leaves half a profile behind. (The text size is the exception: it
-/// changes the app as soon as it is chosen, so the person can see what they picked.)
+/// leaving half way never leaves half a profile behind. (Text size and talking speed are the
+/// exceptions: they apply as soon as they are chosen, so the person can try them out.)
 /// Mirrors SignUpScreen.tsx on the web.
 struct SignUpView: View {
     @Binding var textSize: TextSizeStep
+    @Binding var talkSpeed: TalkSpeedStep
     let onComplete: (Profile) -> Void
 
     private static let stepTitles = [
@@ -14,7 +15,11 @@ struct SignUpView: View {
         "Where you live",
         "What you like",
         "Anything else",
+        "Your family",
+        "A daily reminder",
+        "Your radio time",
         "Text size",
+        "Talking speed",
         "All set"
     ]
     private static let lastStep = stepTitles.count - 1
@@ -27,8 +32,14 @@ struct SignUpView: View {
     @State private var draft = Profile()
     @State private var nameError: String?
 
-    init(textSize: Binding<TextSizeStep>, initialStep: Int = 0, onComplete: @escaping (Profile) -> Void) {
+    init(
+        textSize: Binding<TextSizeStep>,
+        talkSpeed: Binding<TalkSpeedStep>,
+        initialStep: Int = 0,
+        onComplete: @escaping (Profile) -> Void
+    ) {
         _textSize = textSize
+        _talkSpeed = talkSpeed
         _step = State(initialValue: min(max(initialStep, 0), Self.lastStep))
         self.onComplete = onComplete
     }
@@ -117,9 +128,54 @@ struct SignUpView: View {
             )
             .popIn(2)
         case 5:
+            headlineText("Who would like to hear how you're doing?")
+            lede("A son, a daughter, a friend. You can skip this.")
+            VStack(spacing: 18) {
+                LabelledField(
+                    label: "Their name",
+                    text: $draft.familyName,
+                    placeholder: "Sarah",
+                    maxLength: 40,
+                    autoFocus: true
+                )
+                LabelledField(
+                    label: "Their phone number",
+                    text: $draft.familyPhone,
+                    placeholder: "604 555 0134",
+                    maxLength: 24,
+                    keyboard: .phonePad,
+                    contentType: .telephoneNumber,
+                    onSubmit: next
+                )
+            }
+            .popIn(2)
+        case 6:
+            headlineText("Anything the radio should remind you about?")
+            lede("Like a pill to take or plants to water. You can skip this.")
+            LabelledField(
+                label: "Each morning, remind me to…",
+                text: $draft.reminder,
+                placeholder: "Take my blood pressure pill",
+                maxLength: 80,
+                capitalization: .sentences,
+                autoFocus: true,
+                onSubmit: next
+            )
+            .popIn(2)
+        case 7:
+            headlineText("When should your radio be ready?")
+            lede("We'll remind you each morning.")
+            ShowTimePicker(selection: $draft.showTime)
+                .popIn(2)
+        case 8:
             headlineText("How big should the writing be?")
             lede("Tap one. You can change it any time in Settings.")
             TextSizePicker(selection: $textSize)
+                .popIn(2)
+        case 9:
+            headlineText("How fast should the radio talk?")
+            lede("Tap one. You can change it any time in Settings.")
+            TalkSpeedPicker(selection: $talkSpeed)
                 .popIn(2)
         default:
             headlineWords(["You're", "all", "set,"], marked: [firstName + "!"], size: bigHeadline, spoken: "You're all set, \(firstName)!")

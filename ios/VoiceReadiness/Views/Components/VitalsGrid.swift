@@ -2,6 +2,8 @@ import SwiftUI
 
 struct VitalsGrid: View {
     let metrics: [Metric]
+    /// Opens the numbers behind a vital. Without it the rows are plain.
+    var onOpen: ((MeasureKey) -> Void)?
 
     var body: some View {
         RetroWindow(title: "Today's Vitals", padded: false) {
@@ -10,7 +12,14 @@ struct VitalsGrid: View {
                     if index > 0 {
                         DashedDivider()
                     }
-                    VitalRow(metric: metric)
+                    // Only a vital with a measurement behind it can be opened.
+                    if metric.reading != nil, let onOpen {
+                        Button { onOpen(metric.key) } label: { VitalRow(metric: metric, opens: true) }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows the numbers")
+                    } else {
+                        VitalRow(metric: metric, opens: false)
+                    }
                 }
             }
         }
@@ -28,6 +37,8 @@ private struct DashedDivider: View {
 
 private struct VitalRow: View {
     let metric: Metric
+    /// Tapping it shows the numbers: a chevron says so.
+    let opens: Bool
 
     @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 48
 
@@ -43,9 +54,18 @@ private struct VitalRow: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(metric.label)
-                    .font(AppFont.head(23, relativeTo: .title3))
-                    .foregroundStyle(AppTheme.ink)
+                HStack {
+                    Text(metric.label)
+                        .font(AppFont.head(23, relativeTo: .title3))
+                        .foregroundStyle(AppTheme.ink)
+                    Spacer(minLength: 8)
+                    if opens {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(AppTheme.ink)
+                            .accessibilityHidden(true)
+                    }
+                }
 
                 Text(metric.description)
                     .font(AppFont.body(17))

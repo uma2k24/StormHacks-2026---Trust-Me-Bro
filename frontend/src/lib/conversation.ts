@@ -91,15 +91,16 @@ export type Reply = {
 
 const SYSTEM_PROMPT = `You are the friendly host of a small morning radio show, talking with one listener, often an older adult. They have just answered a question you asked, and your reply is read aloud before the next segment.
 
-Reply in two or three short spoken sentences, at most 50 words in total. Plain speech: no markdown, links, emoji, lists or abbreviations; say numbers the way a host would ("four to two", "around six").
-- First, respond to what they actually said, warmly and specifically, using their own details (a dish, a team, a flower). Do not repeat their words back at length.
-- Then add one fresh, true detail that connects to what they said or to their interests: something current from Google Search when it is available (a recent result, a local story, a seasonal tip, a new release), or something from today's forecast. Name a place or a team only if it appears in their details or in what they said.
+HARD LIMIT: one or two short spoken sentences only, and at most 25 words total. Prefer one sentence when you can. Stop after the second. Never ramble, never stack extra asides, never pad with "and also" or a second tip.
+Plain speech: no markdown, links, emoji, lists or abbreviations; say numbers the way a host would ("four to two", "around six").
+- First sentence: respond to what they actually said, warmly and specifically, using their own details (a dish, a team, a flower). Do not repeat their words back at length.
+- Second sentence (only if needed): one brief, true detail that connects to what they said or to their interests — something current from Google Search when available, or today's forecast. Name a place or a team only if it appears in their details or in what they said.
 - Never invent scores, headlines, events or facts. If you cannot find anything current and relevant, offer a gentle seasonal tip or a fond remark instead.
 - Do not ask a question: the show moves on by itself.
 - If they say they are unwell, sad, in pain or need help, answer kindly and suggest they mention it to someone they trust. Do not diagnose or give medical advice.
 - If you could not follow what they said, or it has nothing to do with the question, still answer warmly and carry on with the topic.
 - Keep it light: skip tragedies, crime, politics and anything distressing. Never mention health, voices, recording, screening or check-ins.
-- When "Last segment" is yes, finish with a short, warm sign-off that thanks them by name and ends the show.
+- When "Last segment" is yes, fold a short warm sign-off into that same one-or-two-sentence budget (thank them by name); do not add a third sentence.
 
 Reply with only the words to be spoken: no quotation marks and no labels.
 
@@ -167,6 +168,9 @@ function buildPrompt(
   ].join("\n");
 }
 
+const MAX_REPLY_CHARS = 180;
+const MAX_REPLY_SENTENCES = 2;
+
 /** Gemini sometimes decorates: strip markdown, citation marks and wrapping quotes, and keep it short. */
 function tidyReply(text: string): string {
   const plain = text
@@ -176,12 +180,20 @@ function tidyReply(text: string): string {
     .trim()
     .replace(/^["“”]+|["“”]+$/g, "")
     .trim();
-  if (plain.length <= 420) return plain;
 
-  // too long to read out: stop at the last full sentence that fits
-  const cut = plain.slice(0, 420);
+  // keep the first one or two spoken sentences even if the model runs on
+  const parts = plain.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [plain];
+  const capped = parts
+    .slice(0, MAX_REPLY_SENTENCES)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" ");
+  if (capped.length <= MAX_REPLY_CHARS) return capped;
+
+  // still too long to read out: stop at the last full sentence that fits
+  const cut = capped.slice(0, MAX_REPLY_CHARS);
   const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
-  return end > 120 ? cut.slice(0, end + 1) : cut.trimEnd() + "…";
+  return end > 60 ? cut.slice(0, end + 1) : cut.trimEnd() + "…";
 }
 
 async function writeReply(request: ReplyRequest): Promise<string> {
@@ -197,8 +209,9 @@ async function writeReply(request: ReplyRequest): Promise<string> {
       system: SYSTEM_PROMPT,
       // a person is waiting for this one: don't let a slow search hold up the show
       timeoutMs: grounded ? 14000 : 9000,
-      temperature: 0.8,
-      maxOutputTokens: 512,
+      temperature: 0.7,
+      // ~2–3 short sentences; keep the budget tight so the model stops early
+      maxOutputTokens: 120,
     });
 
   const text = wantsSearch(request.segment.kind)

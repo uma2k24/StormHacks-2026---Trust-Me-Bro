@@ -12,6 +12,7 @@
     "framer-motion": "^14.0.0",
     "lucide-react": "^1.51.0",
     "next": "16.3.8",
+    "onnxruntime-node": "^1.30.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1"

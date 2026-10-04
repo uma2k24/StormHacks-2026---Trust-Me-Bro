@@ -18,8 +18,8 @@ enum BriefingService {
         return URL(string: "http://127.0.0.1:3000")!
     }
 
-    /// Today's show for this listener, or nil when the backend can't be reached.
-    static func fetchBriefing(for profile: Profile) async -> Briefing? {
+    /// Today's show for this listener covering the two `picks`, or nil when the backend can't be reached.
+    static func fetchBriefing(for profile: Profile, picks: [Interest]) async -> Briefing? {
         var components = URLComponents(
             url: baseURL.appending(path: "api/briefing"),
             resolvingAgainstBaseURL: false
@@ -28,7 +28,8 @@ enum BriefingService {
             URLQueryItem(name: "name", value: profile.name),
             URLQueryItem(name: "city", value: profile.city),
             URLQueryItem(name: "interests", value: profile.interests.map(\.rawValue).joined(separator: ",")),
-            URLQueryItem(name: "extras", value: profile.extras)
+            URLQueryItem(name: "extras", value: profile.extras),
+            URLQueryItem(name: "picks", value: picks.map(\.rawValue).joined(separator: ","))
         ]
         guard let url = components?.url else { return nil }
 
@@ -65,7 +66,8 @@ enum BriefingService {
 }
 
 /// The radio's voice: plays ElevenLabs clips one at a time. When there is no voice it waits out the
-/// reading time instead, so the show still paces itself. Mirrors frontend/src/lib/radioVoice.ts.
+/// reading time instead, so the show still paces itself. Playback follows the listener's talking-speed
+/// setting. Mirrors frontend/src/lib/radioVoice.ts.
 @MainActor
 final class RadioVoice: NSObject, AVAudioPlayerDelegate {
     static let shared = RadioVoice()
@@ -92,24 +94,41 @@ final class RadioVoice: NSObject, AVAudioPlayerDelegate {
         return clip
     }
 
+    /// Returns once a line's audio is ready (or has failed), so its text and voice can start together.
+    func prepare(_ text: String) async {
+        _ = await prefetch(text).value
+    }
+
     /// Reads a line aloud and returns when it has finished, or when the calling task is cancelled.
-    func speak(_ text: String) async {
+    /// `onProgress` is told how far through the line the voice is (0...1) many times a second, so its
+    /// words can appear as they are said. Without audio it paces itself over the reading time instead,
+    /// so the words still arrive.
+    func speak(_ text: String, onProgress: ((Double) -> Void)? = nil) async {
         let data = await prefetch(text).value
         guard !Task.isCancelled else { return }
 
         guard let data, let player = try? AVAudioPlayer(data: data) else {
-            try? await Task.sleep(for: CheckInScript.readingTime(text))
+            await pace(text, onProgress: onProgress)
             return
         }
 
         prepareSession()
+        player.enableRate = true
+        player.rate = TalkSpeedStep.current.rate
         player.delegate = self
         self.player = player
         guard player.play() else {
-            try? await Task.sleep(for: CheckInScript.readingTime(text))
+            await pace(text, onProgress: onProgress)
             return
         }
 
+        onProgress?(0)
+        let ticker = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+                if player.duration > 0 { onProgress?(min(1, player.currentTime / player.duration)) }
+            }
+        }
         await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 finished = continuation
@@ -117,6 +136,36 @@ final class RadioVoice: NSObject, AVAudioPlayerDelegate {
         } onCancel: {
             Task { @MainActor in RadioVoice.shared.stop() }
         }
+        ticker.cancel()
+        if !Task.isCancelled { onProgress?(1) }
+    }
+
+    /// Reads something aloud because the listener asked (the voice summary): the radio's voice when
+    /// there is one, otherwise the device's own voice, so pressing Play is never silent. Mirrors
+    /// readAloud() in radioVoice.ts.
+    func readAloud(_ text: String, onProgress: ((Double) -> Void)? = nil) async {
+        let data = await prefetch(text).value
+        guard !Task.isCancelled else { return }
+        if data != nil {
+            await speak(text, onProgress: onProgress)
+        } else {
+            await DeviceVoice.shared.speak(text, onProgress: onProgress)
+        }
+    }
+
+    /// No voice: the line stays up for about as long as it takes to read, with its words arriving over that time.
+    private func pace(_ text: String, onProgress: ((Double) -> Void)?) async {
+        let rate = Double(TalkSpeedStep.current.rate)
+        let total = CheckInScript.readingTime(text).timeInterval / max(rate, 0.1)
+        let startedAt = Date.now
+        onProgress?(0)
+        while !Task.isCancelled {
+            let elapsed = Date.now.timeIntervalSince(startedAt)
+            if elapsed >= total { break }
+            onProgress?(elapsed / total)
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        if !Task.isCancelled { onProgress?(1) }
     }
 
     func stop() {
@@ -126,11 +175,12 @@ final class RadioVoice: NSObject, AVAudioPlayerDelegate {
         finished = nil
     }
 
-    /// Spoken-word playback that still sounds with the ring/silent switch on.
-    private func prepareSession() {
+    /// One session for the whole show: the radio plays, and the listener's answers are recorded, without
+    /// the session changing in between. Plays through the speaker, and still sounds with the silent switch on.
+    func prepareSession() {
         guard !sessionReady else { return }
         sessionReady = true
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
+        try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
         try? AVAudioSession.sharedInstance().setActive(true)
     }
 
@@ -140,5 +190,74 @@ final class RadioVoice: NSObject, AVAudioPlayerDelegate {
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor in RadioVoice.shared.stop() }
+    }
+}
+
+/// The phone's built-in voice, a touch slower than usual: the fallback when the radio's voice isn't there.
+@MainActor
+final class DeviceVoice: NSObject, AVSpeechSynthesizerDelegate {
+    static let shared = DeviceVoice()
+
+    private let synthesizer = AVSpeechSynthesizer()
+    private var finished: CheckedContinuation<Void, Never>?
+    private var progress: ((Double) -> Void)?
+    private var length = 1
+
+    override init() {
+        super.init()
+        synthesizer.delegate = self
+    }
+
+    /// Returns when it has finished, or when the calling task is cancelled.
+    func speak(_ text: String, onProgress: ((Double) -> Void)? = nil) async {
+        stop()
+        RadioVoice.shared.prepareSession() // through the speaker, even with the silent switch on
+        let utterance = AVSpeechUtterance(string: text)
+        let rate = AVSpeechUtteranceDefaultSpeechRate * 0.9 * TalkSpeedStep.current.rate
+        utterance.rate = min(AVSpeechUtteranceMaximumSpeechRate, max(AVSpeechUtteranceMinimumSpeechRate, rate))
+        length = max(text.utf16.count, 1)
+        progress = onProgress
+        onProgress?(0)
+
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                guard !Task.isCancelled else { return continuation.resume() }
+                finished = continuation
+                synthesizer.speak(utterance)
+            }
+        } onCancel: {
+            Task { @MainActor in DeviceVoice.shared.stop() }
+        }
+        progress = nil
+        if !Task.isCancelled { onProgress?(1) }
+    }
+
+    func stop() {
+        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        finish()
+    }
+
+    private func finish() {
+        finished?.resume()
+        finished = nil
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        willSpeakRangeOfSpeechString characterRange: NSRange,
+        utterance: AVSpeechUtterance
+    ) {
+        Task { @MainActor in
+            let voice = DeviceVoice.shared
+            voice.progress?(Double(characterRange.location) / Double(voice.length))
+        }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in DeviceVoice.shared.finish() }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in DeviceVoice.shared.finish() }
     }
 }

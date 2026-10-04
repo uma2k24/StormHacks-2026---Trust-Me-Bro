@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Everything chosen at sign-up, in one place. Text size changes the app the moment it is tapped;
-/// the rest is saved when the person taps Done, so today's show is only rewritten once.
+/// Everything chosen at sign-up, in one place. Text size and talking speed change the moment they
+/// are tapped; the rest is saved when the person taps Done, so today's show is only rewritten once.
 /// Mirrors SettingsScreen.tsx on the web.
 struct SettingsView: View {
     @Binding var textSize: TextSizeStep
+    @Binding var talkSpeed: TalkSpeedStep
     let onDone: (Profile) -> Void
 
     @ScaledMetric(relativeTo: .title) private var headlineSize: CGFloat = 34
@@ -13,9 +14,15 @@ struct SettingsView: View {
     @State private var nameError: String?
     @State private var nameFocus = 0
 
-    init(profile: Profile, textSize: Binding<TextSizeStep>, onDone: @escaping (Profile) -> Void) {
+    init(
+        profile: Profile,
+        textSize: Binding<TextSizeStep>,
+        talkSpeed: Binding<TalkSpeedStep>,
+        onDone: @escaping (Profile) -> Void
+    ) {
         _draft = State(initialValue: profile)
         _textSize = textSize
+        _talkSpeed = talkSpeed
         self.onDone = onDone
     }
 
@@ -75,13 +82,71 @@ struct SettingsView: View {
                         }
                     }
 
-                    RetroWindow(title: "Text size", index: 2) {
+                    RetroWindow(title: "Your family", index: 2) {
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text("Someone who'd like to hear how you're doing. One tap calls them or sends them your news.")
+                                .font(AppFont.body(18))
+                                .foregroundStyle(AppTheme.inkSoft)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            LabelledField(
+                                label: "Their name",
+                                text: $draft.familyName,
+                                placeholder: "Sarah",
+                                maxLength: 40
+                            )
+
+                            LabelledField(
+                                label: "Their phone number",
+                                text: $draft.familyPhone,
+                                placeholder: "604 555 0134",
+                                maxLength: 24,
+                                keyboard: .phonePad,
+                                contentType: .telephoneNumber,
+                                submitLabel: .done
+                            )
+                        }
+                    }
+
+                    RetroWindow(title: "Your mornings", index: 3) {
+                        VStack(alignment: .leading, spacing: 24) {
+                            LabelledField(
+                                label: "Each morning, remind me to…",
+                                hint: "Optional: the radio says it at the end of the show",
+                                text: $draft.reminder,
+                                placeholder: "Take my blood pressure pill",
+                                maxLength: 80,
+                                capitalization: .sentences,
+                                submitLabel: .done
+                            )
+
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("When should your radio be ready?")
+                                    .font(AppFont.body(21, bold: true))
+                                    .foregroundStyle(AppTheme.ink)
+                                    .accessibilityAddTraits(.isHeader)
+                                ShowTimePicker(selection: $draft.showTime)
+                            }
+                        }
+                    }
+
+                    RetroWindow(title: "Text size", index: 4) {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("How big should the writing be?")
                                 .font(AppFont.body(21, bold: true))
                                 .foregroundStyle(AppTheme.ink)
                                 .accessibilityAddTraits(.isHeader)
                             TextSizePicker(selection: $textSize)
+                        }
+                    }
+
+                    RetroWindow(title: "Talking speed", index: 5) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("How fast should the radio talk?")
+                                .font(AppFont.body(21, bold: true))
+                                .foregroundStyle(AppTheme.ink)
+                                .accessibilityAddTraits(.isHeader)
+                            TalkSpeedPicker(selection: $talkSpeed)
                         }
                     }
                 }

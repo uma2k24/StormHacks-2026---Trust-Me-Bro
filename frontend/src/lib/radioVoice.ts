@@ -1,9 +1,11 @@
 import { readingTime } from "@/data/checkInScript";
+import { talkSpeedRate } from "@/data/profile";
+import { getTalkSpeed } from "@/lib/storage";
 
 /**
  * The radio's voice: plays ElevenLabs clips from /api/briefing/speech, one at a time.
  * When there is no voice (no key, offline, autoplay blocked) it waits out the reading time
- * instead, so the show still paces itself.
+ * instead, so the show still paces itself. Playback follows the listener's talking-speed setting.
  */
 
 // A zero-length WAV, played once inside a tap so later plays are allowed (Safari's autoplay rule).
@@ -71,7 +73,10 @@ export async function speak(
   const player = audio;
   if (!url || !player) return pace(text, signal, onProgress);
 
+  const rate = talkSpeedRate(getTalkSpeed());
   player.src = url;
+  player.defaultPlaybackRate = rate;
+  player.playbackRate = rate;
   try {
     await player.play();
   } catch {
@@ -124,19 +129,20 @@ export async function readAloud(
   return pace(text, signal, onProgress);
 }
 
-/** The browser's built-in voice, a touch slower than usual. */
+/** The browser's built-in voice, paced to the listener's talking-speed setting. */
 function deviceVoice(
   text: string,
   signal: AbortSignal,
   onProgress?: (fraction: number) => void,
 ): Promise<void> {
   return new Promise((resolve) => {
+    const rate = talkSpeedRate(getTalkSpeed());
     const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
+    utterance.rate = 0.9 * rate;
     let settled = false;
     // some browsers never report the end (or have no voices at all): give up after twice the reading time
-    const safety = window.setTimeout(() => finish(), readingTime(text) * 2);
+    const safety = window.setTimeout(() => finish(), (readingTime(text) * 2) / rate);
     const finish = () => {
       if (settled) return;
       settled = true;
@@ -167,7 +173,7 @@ async function pace(
   signal: AbortSignal,
   onProgress?: (fraction: number) => void,
 ): Promise<void> {
-  const ms = readingTime(text);
+  const ms = readingTime(text) / talkSpeedRate(getTalkSpeed());
   const startedAt = Date.now();
   onProgress?.(0);
   const ticker = window.setInterval(

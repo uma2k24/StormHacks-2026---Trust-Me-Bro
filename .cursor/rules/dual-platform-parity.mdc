@@ -32,5 +32,8 @@ When the user asks for UX, UI, copy, flow, screen, or mock-data changes:
 | `ResultsDashboard.tsx` | `ResultsView.swift` |
 | `src/data/checkInScript.ts` | `Models/CheckInScript.swift` |
 | `src/data/mockResults.ts` | `Models/ScreeningModels.swift` |
+| `src/data/voiceReading.ts` | `Models/VoiceReading.swift` |
+| `src/lib/voiceClient.ts`, `src/types/voice.ts` | `Models/VoiceAnalysis.swift` |
+| `VitalsGrid.tsx`, `VitalDetail.tsx` | `Views/Components/VitalsGrid.swift`, `VitalDetailView.swift` |
 
 Do not assume updating only `frontend/` is enough — the Xcode simulator runs the iOS app.

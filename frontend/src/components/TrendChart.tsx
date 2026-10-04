@@ -17,7 +17,6 @@ type TrendChartProps = {
 };
 
 const INK = "#0F2E33";
-const START_LABEL = "2 weeks ago";
 const AXIS_FONT_REM = 1.05;
 /** Rough width of one bold display-font character, in ems. */
 const CHAR_EM = 0.6;
@@ -34,6 +33,8 @@ export function TrendChart({ data }: TrendChartProps) {
   const last = data.length - 1;
   const first = data[0];
   const today = data[last];
+  // the first point says how far back the chart goes: "Oct 1", or "2 weeks ago" for a full fortnight
+  const startLabel = first.day;
   const axisFontPx = AXIS_FONT_REM * remPx();
   // room for "100" at the current text size, so the biggest setting doesn't clip it
   const yAxisWidth = Math.ceil(3 * CHAR_EM * axisFontPx) + 6;
@@ -90,7 +91,7 @@ export function TrendChart({ data }: TrendChartProps) {
   const renderXTick = ({ x, y, width, payload }: XAxisTickContentProps) => {
     const isToday = payload.value === last;
     const bothFit =
-      (START_LABEL.length + today.day.length + 2) * CHAR_EM * axisFontPx <= Number(width);
+      (startLabel.length + today.day.length + 2) * CHAR_EM * axisFontPx <= Number(width);
     if (!isToday && !bothFit) return <g />;
     return (
       <text
@@ -103,7 +104,7 @@ export function TrendChart({ data }: TrendChartProps) {
         fontWeight={800}
         fontFamily="var(--ff-head)"
       >
-        {isToday ? today.day : START_LABEL}
+        {isToday ? today.day : startLabel}
       </text>
     );
   };
@@ -111,13 +112,19 @@ export function TrendChart({ data }: TrendChartProps) {
   return (
     <Window title="Readiness Over 14 Days">
       <p className="m-0 text-[1.15rem] text-[var(--ink-soft)]">
-        A simple look at how your score has been trending.
+        {last === 0
+          ? "This is your first reading. Every morning adds another dot."
+          : "A simple look at how your score has been trending."}
       </p>
 
       <div
         className="mt-5 h-64 w-full"
         role="img"
-        aria-label={`Line chart of your readiness over 14 days. It started at ${first.score} and today is ${today.score}.`}
+        aria-label={
+          last === 0
+            ? `Line chart of your readiness. Today is ${today.score}, your first reading.`
+            : `Line chart of your readiness since ${startLabel}. It started at ${first.score} and today is ${today.score}.`
+        }
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={series} margin={{ top: 22, right: 20, left: 0, bottom: 4 }}>
@@ -129,7 +136,7 @@ export function TrendChart({ data }: TrendChartProps) {
               type="number"
               dataKey="index"
               domain={[-0.5, last + 0.6]}
-              ticks={[0, last]}
+              ticks={last === 0 ? [0] : [0, last]}
               interval={0}
               tickLine={false}
               axisLine={{ stroke: INK, strokeWidth: 2.5 }}

@@ -12,6 +12,8 @@
 		6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */; };
 		C7A1B2D3E4F5061728394A5B /* CheckInScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */; };
 		A1B2C3D4E5F60718293A4B5C /* BriefingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */; };
+		AC1D2E3F4A5B6C7D8E9F0A1B /* AnswerRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1D2E3F4A5B6C7D8E9F0A1C /* AnswerRecorder.swift */; };
+		AD2E3F4A5B6C7D8E9F0A1B2C /* ConversationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2E3F4A5B6C7D8E9F0A1B2D /* ConversationService.swift */; };
 		8E5235201F9F4B048822348A /* IdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0131046926C7453DB0A2718C /* IdleView.swift */; };
 		E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E56B5488BD045F087A32E49 /* RecordingView.swift */; };
 		0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5729BE7C8004650B2F05570 /* ProcessingView.swift */; };
@@ -29,9 +31,16 @@
 		C1A34BC5D6E7F8091A2B3C4D /* BricolageGrotesque-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B0923AB4C5D6E7F8091A2B3C /* BricolageGrotesque-ExtraBold.ttf */; };
 		DDB137D1D2034A1D8793318A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 623F283978454BC98621FE5A /* Assets.xcassets */; };
 		AB1C2D3E4F5061728394A5B1 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B2 /* Profile.swift */; };
+		AB1C2D3E4F5061728394A5B9 /* Learning.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5BA /* Learning.swift */; };
+		CC11D0A1000000000000A005 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000A006 /* TodayView.swift */; };
+		CC11D0A1000000000000A003 /* MorningReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000A004 /* MorningReminder.swift */; };
+		CC11D0A1000000000000A001 /* Daily.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000A002 /* Daily.swift */; };
 		AB1C2D3E4F5061728394A5B3 /* Forms.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B4 /* Forms.swift */; };
 		AB1C2D3E4F5061728394A5B5 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */; };
 		AB1C2D3E4F5061728394A5B7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */; };
+		CC11D0A1000000000000B001 /* VoiceReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000B002 /* VoiceReading.swift */; };
+		CC11D0A1000000000000B003 /* VoiceAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000B004 /* VoiceAnalysis.swift */; };
+		CC11D0A1000000000000B005 /* VitalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11D0A1000000000000B006 /* VitalDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +50,8 @@
 		F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreeningModels.swift; sourceTree = "<group>"; };
 		D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInScript.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingService.swift; sourceTree = "<group>"; };
+		AC1D2E3F4A5B6C7D8E9F0A1C /* AnswerRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerRecorder.swift; sourceTree = "<group>"; };
+		AD2E3F4A5B6C7D8E9F0A1B2D /* ConversationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationService.swift; sourceTree = "<group>"; };
 		0131046926C7453DB0A2718C /* IdleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleView.swift; sourceTree = "<group>"; };
 		9E56B5488BD045F087A32E49 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
 		E5729BE7C8004650B2F05570 /* ProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingView.swift; sourceTree = "<group>"; };
@@ -60,9 +71,16 @@
 		E3C56DE7F8091A2B3C4D5E6F /* OFL-BricolageGrotesque.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-BricolageGrotesque.txt"; sourceTree = "<group>"; };
 		623F283978454BC98621FE5A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB1C2D3E4F5061728394A5B2 /* Profile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Profile.swift; sourceTree = "<group>"; };
+		AB1C2D3E4F5061728394A5BA /* Learning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Learning.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000A006 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000A004 /* MorningReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningReminder.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000A002 /* Daily.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Daily.swift; sourceTree = "<group>"; };
 		AB1C2D3E4F5061728394A5B4 /* Forms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Forms.swift; sourceTree = "<group>"; };
 		AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000B002 /* VoiceReading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceReading.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000B004 /* VoiceAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAnalysis.swift; sourceTree = "<group>"; };
+		CC11D0A1000000000000B006 /* VitalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VitalDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,7 +129,14 @@
 				F34D3FE2FC254CB4A628C7B7 /* ScreeningModels.swift */,
 				D8B2C3E4F5061728394A5B6C /* CheckInScript.swift */,
 				B2C3D4E5F60718293A4B5C6D /* BriefingService.swift */,
+				AC1D2E3F4A5B6C7D8E9F0A1C /* AnswerRecorder.swift */,
+				AD2E3F4A5B6C7D8E9F0A1B2D /* ConversationService.swift */,
 				AB1C2D3E4F5061728394A5B2 /* Profile.swift */,
+				AB1C2D3E4F5061728394A5BA /* Learning.swift */,
+				CC11D0A1000000000000A004 /* MorningReminder.swift */,
+				CC11D0A1000000000000A002 /* Daily.swift */,
+				CC11D0A1000000000000B004 /* VoiceAnalysis.swift */,
+				CC11D0A1000000000000B002 /* VoiceReading.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -125,6 +150,7 @@
 				6289B03D9FD94A6292C4C643 /* ResultsView.swift */,
 				AB1C2D3E4F5061728394A5B8 /* SettingsView.swift */,
 				AB1C2D3E4F5061728394A5B6 /* SignUpView.swift */,
+				CC11D0A1000000000000A006 /* TodayView.swift */,
 				9EE3413345544C688AF8D169 /* Components */,
 			);
 			path = Views;
@@ -142,6 +168,7 @@
 				3F1A2B4C5D6E7F8091A2B3C4 /* Chrome.swift */,
 				5A3C4D6E7F8091A2B3C4D5E6 /* Theme.swift */,
 				AB1C2D3E4F5061728394A5B4 /* Forms.swift */,
+				CC11D0A1000000000000B006 /* VitalDetailView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -235,6 +262,8 @@
 				6E585EE9A24943759641E03C /* ScreeningModels.swift in Sources */,
 				C7A1B2D3E4F5061728394A5B /* CheckInScript.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* BriefingService.swift in Sources */,
+				AC1D2E3F4A5B6C7D8E9F0A1B /* AnswerRecorder.swift in Sources */,
+				AD2E3F4A5B6C7D8E9F0A1B2C /* ConversationService.swift in Sources */,
 				8E5235201F9F4B048822348A /* IdleView.swift in Sources */,
 				E91A30D7DBBA4D458CB60502 /* RecordingView.swift in Sources */,
 				0996EEDA21A44C3E9235266C /* ProcessingView.swift in Sources */,
@@ -251,6 +280,13 @@
 				AB1C2D3E4F5061728394A5B5 /* SignUpView.swift in Sources */,
 				AB1C2D3E4F5061728394A5B3 /* Forms.swift in Sources */,
 				AB1C2D3E4F5061728394A5B1 /* Profile.swift in Sources */,
+				AB1C2D3E4F5061728394A5B9 /* Learning.swift in Sources */,
+				CC11D0A1000000000000A005 /* TodayView.swift in Sources */,
+				CC11D0A1000000000000A003 /* MorningReminder.swift in Sources */,
+				CC11D0A1000000000000A001 /* Daily.swift in Sources */,
+				CC11D0A1000000000000B005 /* VitalDetailView.swift in Sources */,
+				CC11D0A1000000000000B003 /* VoiceAnalysis.swift in Sources */,
+				CC11D0A1000000000000B001 /* VoiceReading.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -106,6 +106,25 @@ export function isTextSize(value: unknown): value is TextSize {
   return TEXT_SIZES.some((size) => size.id === value);
 }
 
+/** How fast the radio talks. Applied to ElevenLabs clips and the device voice fallback. */
+export type TalkSpeed = "slow" | "steady" | "fast";
+
+export const DEFAULT_TALK_SPEED: TalkSpeed = "steady";
+
+export const TALK_SPEEDS: { id: TalkSpeed; label: string; rate: number }[] = [
+  { id: "slow", label: "Slow", rate: 0.75 },
+  { id: "steady", label: "Steady", rate: 1 },
+  { id: "fast", label: "Fast", rate: 1.25 },
+];
+
+export function isTalkSpeed(value: unknown): value is TalkSpeed {
+  return TALK_SPEEDS.some((speed) => speed.id === value);
+}
+
+export function talkSpeedRate(speed: TalkSpeed): number {
+  return TALK_SPEEDS.find((entry) => entry.id === speed)?.rate ?? 1;
+}
+
 /** The listener's details with stray whitespace removed. */
 export function tidyProfile(profile: Profile): Profile {
   return {
